@@ -3966,6 +3966,9 @@
 (defn ^{:private true}
   maybe-destructured
   [params body]
+  (when (not (vector? params))
+    (throw (IllegalArgumentException. (str "Parameter list for fn must be a vector."
+                                           " Found: " (class params)))))
   (if (every? symbol? params)
     (cons params body)
     (loop [params params

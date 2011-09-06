@@ -272,9 +272,8 @@
         (let [_ ;; Note: Cannot delegate this check to def because of the call to (with-meta name ..)
                 ;; Same as (if (not (symbol? name)
                 (if (if (instance? clojure.lang.Symbol name) false true)
-                  (throw (IllegalArgumentException. (.toString 
-                                                      (.concat "First argument to defn should be a symbol. Found: "
-                                                               (.toString (.getClass name))))))
+                  (throw (IllegalArgumentException. (.concat "First argument to defn should be a symbol. Found: "
+                                                             (.toString (.getClass name)))))
                   nil)
               m (if (string? (first fdecl))
                   {:doc (first fdecl)}
@@ -6471,8 +6470,18 @@
 (defn- ^{:dynamic true} assert-valid-fdecl
   "A good fdecl looks like (([a] ...) ([a b] ...)) near the end of defn."
   [fdecl]
-  (if-let [bad-args (seq (remove #(vector? %) (map first fdecl)))]
-    (throw (IllegalArgumentException. (str "Parameter declaration " (first bad-args) " should be a vector")))))
+  (let [argdecls (map 
+                   #(if (seq? %)
+                      (first %)
+                      (throw (IllegalArgumentException. 
+                               (str "Parameter declaration "
+                                    %
+                                    " should be a vector"))))
+                   fdecl)
+        bad-args (seq (remove #(vector? %) argdecls))]
+    (when bad-args
+      (throw (IllegalArgumentException. (str "Parameter declaration " (first bad-args) 
+                                             " should be a vector"))))))
 
 (defn with-redefs-fn
   "Temporarily redefines Vars during a call to func.  Each val of

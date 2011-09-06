@@ -13,7 +13,9 @@
 (deftest defn-error-messages
   (testing "bad arglist forms"
     (is (fails-with-cause? IllegalArgumentException '#"Parameter declaration arg1 should be a vector"
-          (eval-in-temp-ns (defn foo (arg1 arg2))))))
+          (eval-in-temp-ns (defn foo (arg1 arg2)))))
+    (is (fails-with-cause? IllegalArgumentException '#"Parameter declaration a should be a vector"
+          (eval-in-temp-ns (defn foo a)))))
   (testing "bad name"
     (is (fails-with-cause? IllegalArgumentException '#"First argument to defn should be a symbol. Found: class java.lang.String"
           (eval-in-temp-ns (defn "bad docstring" testname [arg1 arg2]))))))

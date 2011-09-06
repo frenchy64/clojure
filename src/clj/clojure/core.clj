@@ -269,7 +269,8 @@
                 [name doc-string? attr-map? ([params*] body)+ attr-map?])
    :added "1.0"}
  defn (fn defn [&form &env name & fdecl]
-        (let [_ ;; Same as (if (not (symbol? name)
+        (let [_ ;; Note: Cannot delegate this check to def because of the call to (with-meta name ..)
+                ;; Same as (if (not (symbol? name)
                 (if (if (instance? clojure.lang.Symbol name) false true)
                   (throw (IllegalArgumentException. (.toString 
                                                       (.concat "First argument to defn should be a symbol. Found: "
@@ -4004,8 +4005,8 @@
           psig (fn* [sig]
                  (let [[params & body] sig
                        _ (when (not (vector? params))
-                           (throw (IllegalArgumentException. (str "Parameter list for fn must be a vector."
-                                                                  " Found: " (class params)))))
+                           (throw (IllegalArgumentException. (str "Parameter declaration " params
+                                                                  " should be a vector"))))
                        conds (when (and (next body) (map? (first body))) 
                                            (first body))
                        body (if conds (next body) body)

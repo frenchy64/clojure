@@ -9,18 +9,31 @@
 ; Author: Ambrose Bonnaire-Sergeant
 
 (ns clojure.test-clojure.fn
+  (:import clojure.lang.Compiler)
   (:use clojure.test clojure.test-helper))
 
 (deftest fn-error-checking
-  (is (thrown-with-msg? IllegalArgumentException #"Parameter list for fn must be a vector. Found: java.lang.Character"
-        (eval-in-temp-ns (fn "a" a))))
-  (is (thrown-with-msg? IllegalArgumentException #"Parameter list for fn must be a vector. Found: java.lang.Character"
-        (eval-in-temp-ns (fn "a" []))))
-  (is (thrown-with-msg? IllegalArgumentException #"Parameter list for fn must be a vector. Found: java.lang.Character"
-        (eval-in-temp-ns (fn (1)))))
-  (is (thrown-with-msg? IllegalArgumentException #"Parameter list for fn must be a vector. Found: java.lang.Character"
-        (eval-in-temp-ns (fn
+  (is (thrown-with-msg? 
+        clojure.lang.Compiler$CompilerException 
+        #"java.lang.IllegalArgumentException: Parameter list for fn must be a vector. Found: class java.lang.Character"
+        (eval `(fn "a" a))))
+  (is (thrown-with-msg? 
+        clojure.lang.Compiler$CompilerException 
+        #"java.lang.IllegalArgumentException: Parameter list for fn must be a vector. Found: class java.lang.Character"
+        (eval `(fn "a" []))))
+  (is (thrown-with-msg? 
+        clojure.lang.Compiler$CompilerException 
+        #"java.lang.IllegalArgumentException: Parameter list for fn must be a vector. Found: class java.lang.Long"
+        (eval `(fn (1)))))
+  (is (thrown-with-msg? 
+        clojure.lang.Compiler$CompilerException 
+        #"java.lang.IllegalArgumentException: Parameter list for fn must be a vector. Found: class java.lang.String"
+        (eval `(fn
                  ([a] 1)
                  ("a" 2)))))
-  (is (thrown-with-msg? IllegalArgumentException #"Parameter list for fn must be a vector. Found: java.lang.Character"
-        (eval-in-temp-ns (fn a "a")))))
+  (is (thrown-with-msg? 
+        clojure.lang.Compiler$CompilerException 
+        #"java.lang.IllegalArgumentException: Parameter list for fn must be a vector. Found: class java.lang.Character"
+        (eval `(fn a "a")))))
+
+(

@@ -13,7 +13,10 @@
 (deftest defn-error-messages
   (testing "bad arglist forms"
     (is (fails-with-cause? IllegalArgumentException '#"Parameter declaration arg1 should be a vector"
-          (eval-in-temp-ns (defn foo (arg1 arg2)))))))
+          (eval-in-temp-ns (defn foo (arg1 arg2))))))
+  (testing "bad name"
+    (is (fails-with-cause? IllegalArgumentException '#"First argument to defn should be a symbol. Found: class java.lang.String"
+          (eval-in-temp-ns (defn "a" [arg1 arg2]))))))
 
 (deftest dynamic-redefinition
   ;; too many contextual things for this kind of caching to work...

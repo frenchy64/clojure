@@ -269,7 +269,13 @@
                 [name doc-string? attr-map? ([params*] body)+ attr-map?])
    :added "1.0"}
  defn (fn defn [&form &env name & fdecl]
-        (let [m (if (string? (first fdecl))
+        (let [_ ;; Same as (if (not (symbol? name)
+                (if (if (instance? clojure.lang.Symbol name) false true)
+                  (throw (IllegalArgumentException. (.toString 
+                                                      (.concat "First argument to defn should be a symbol. Found: "
+                                                               (.toString (.getClass name))))))
+                  nil)
+              m (if (string? (first fdecl))
                   {:doc (first fdecl)}
                   {})
               fdecl (if (string? (first fdecl))
@@ -3966,9 +3972,6 @@
 (defn ^{:private true}
   maybe-destructured
   [params body]
-  (when (not (vector? params))
-    (throw (IllegalArgumentException. (str "Parameter list for fn must be a vector."
-                                           " Found: " (class params)))))
   (if (every? symbol? params)
     (cons params body)
     (loop [params params
@@ -4000,6 +4003,9 @@
           sigs (if (vector? (first sigs)) (list sigs) sigs)
           psig (fn* [sig]
                  (let [[params & body] sig
+                       _ (when (not (vector? params))
+                           (throw (IllegalArgumentException. (str "Parameter list for fn must be a vector."
+                                                                  " Found: " (class params)))))
                        conds (when (and (next body) (map? (first body))) 
                                            (first body))
                        body (if conds (next body) body)

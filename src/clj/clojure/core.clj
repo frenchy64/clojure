@@ -4003,6 +4003,9 @@
           sigs (if (vector? (first sigs)) (list sigs) sigs)
           psig (fn* [sig]
                  (let [[params & body] sig
+                       _ (when (not (seq? sig))
+                           (throw (IllegalArgumentException. (str "Found invalid trailing form " sig
+                                                                  " should be a list"))))
                        _ (when (not (vector? params))
                            (throw (IllegalArgumentException. (str "Parameter declaration " params
                                                                   " should be a vector"))))

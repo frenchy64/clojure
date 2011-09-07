@@ -13,25 +13,25 @@
 
 (deftest fn-error-checking
   (testing "bad arglist forms"
-    (is (thrown-with-msg? 
-          clojure.lang.Compiler$CompilerException 
-          #"java.lang.IllegalArgumentException: Parameter declaration a should be a vector"
+    (is (fails-with-cause? java.lang.IllegalArgumentException 
+          #"Parameter declaration a should be a vector"
           (eval `(fn "a" a))))
-    (is (thrown-with-msg? 
-          clojure.lang.Compiler$CompilerException 
-          #"java.lang.IllegalArgumentException: Parameter declaration a should be a vector"
+    (is (fails-with-cause? java.lang.IllegalArgumentException 
+          #"Parameter declaration a should be a vector"
           (eval `(fn "a" []))))
-    (is (thrown-with-msg? 
-          clojure.lang.Compiler$CompilerException 
-          #"java.lang.IllegalArgumentException: Parameter declaration 1 should be a vector"
+    (is (fails-with-cause? java.lang.IllegalArgumentException
+          #"Parameter declaration 1 should be a vector"
           (eval `(fn (1)))))
-    (is (thrown-with-msg? 
-          clojure.lang.Compiler$CompilerException 
-          #"java.lang.IllegalArgumentException: Parameter declaration a should be a vector"
+    (is (fails-with-cause? java.lang.IllegalArgumentException
+          #"Parameter declaration a should be a vector"
           (eval `(fn
                    ([a] 1)
                    ("a" 2)))))
-    (is (thrown-with-msg? 
-          clojure.lang.Compiler$CompilerException 
-          #"java.lang.IllegalArgumentException: Parameter declaration a should be a vector"
-          (eval `(fn a "a"))))))
+    (is (fails-with-cause? java.lang.IllegalArgumentException
+          #"Parameter declaration a should be a vector"
+          (eval `(fn a "a")))))
+    (is (fails-with-cause? java.lang.IllegalArgumentException 
+          #"Found invalid trailing form a should be a list"
+          (eval `(fn "a"
+                   ([a] 1)
+                   [a b])))))

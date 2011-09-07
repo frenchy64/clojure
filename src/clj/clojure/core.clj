@@ -4000,15 +4000,21 @@
   [& sigs]
     (let [name (if (symbol? (first sigs)) (first sigs) nil)
           sigs (if name (next sigs) sigs)
-          sigs (if (vector? (first sigs)) (list sigs) sigs)
+          sigs (if (vector? (first sigs)) 
+                 (list sigs) 
+                 (if (seq? (first sigs))
+                   sigs
+                   (throw (IllegalArgumentException. (str "Parameter declaration " 
+                                                          (first sigs)
+                                                          " should be a vector")))))
           psig (fn* [sig]
                  (let [[params & body] sig
-                       _ (when (not (seq? sig))
-                           (throw (IllegalArgumentException. (str "Found invalid trailing form " sig
-                                                                  " should be a list"))))
                        _ (when (not (vector? params))
-                           (throw (IllegalArgumentException. (str "Parameter declaration " params
-                                                                  " should be a vector"))))
+                           (if (seq? sig)
+                             (throw (IllegalArgumentException. (str "Parameter declaration " params
+                                                                    " should be a vector")))
+                             (throw (IllegalArgumentException. (str "Invalid signature " sig
+                                                                    " should be a list")))))
                        conds (when (and (next body) (map? (first body))) 
                                            (first body))
                        body (if conds (next body) body)

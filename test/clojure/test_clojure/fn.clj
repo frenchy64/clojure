@@ -12,26 +12,36 @@
   (:use clojure.test))
 
 (deftest fn-error-checking
-  (testing "bad arglist forms"
+  (testing "bad arglist"
     (is (fails-with-cause? java.lang.IllegalArgumentException 
           #"Parameter declaration a should be a vector"
-          (eval `(fn "a" a))))
+          (eval '(fn "a" a)))))
+
+  (testing "treat first param as args"
     (is (fails-with-cause? java.lang.IllegalArgumentException 
           #"Parameter declaration a should be a vector"
-          (eval `(fn "a" []))))
+          (eval '(fn "a" [])))))
+
+  (testing "looks like listy signature, but malformed declaration"
     (is (fails-with-cause? java.lang.IllegalArgumentException
           #"Parameter declaration 1 should be a vector"
-          (eval `(fn (1)))))
+          (eval '(fn (1))))))
+
+  (testing "checks each signature"
     (is (fails-with-cause? java.lang.IllegalArgumentException
           #"Parameter declaration a should be a vector"
-          (eval `(fn
+          (eval '(fn
                    ([a] 1)
-                   ("a" 2)))))
+                   ("a" 2))))))
+
+  (testing "correct name but invalid args"
     (is (fails-with-cause? java.lang.IllegalArgumentException
           #"Parameter declaration a should be a vector"
-          (eval `(fn a "a")))))
+          (eval '(fn a "a")))))
+
+  (testing "once the first form sig looks like a listy sig, rest of sigs should be lists"
     (is (fails-with-cause? java.lang.IllegalArgumentException 
-          #"Found invalid trailing form a should be a list"
-          (eval `(fn "a"
+          #"Invalid signature [a b] should be a list"
+          (eval '(fn a
                    ([a] 1)
-                   [a b])))))
+                   [a b]))))))

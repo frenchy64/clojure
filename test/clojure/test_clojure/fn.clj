@@ -39,9 +39,14 @@
           #"Parameter declaration a should be a vector"
           (eval '(fn a "a")))))
 
-  (testing "once the first form sig looks like a listy sig, rest of sigs should be lists"
+  (testing "first sig looks multiarity, rest of sigs should be lists"
     (is (fails-with-cause? java.lang.IllegalArgumentException 
           #"Invalid signature \[a b\] should be a list"
           (eval '(fn a
                    ([a] 1)
-                   [a b]))))))
+                   [a b])))))
+  
+  (testing "missing parameter declaration"
+    (is (fails-with-cause? java.lang.IllegalArgumentException 
+          #"Parameter declaration missing"
+          (eval '(fn a))))))

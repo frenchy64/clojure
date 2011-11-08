@@ -70,6 +70,10 @@ static public boolean equiv(boolean k1, Object k2){
 	return equiv((Object)k1, k2);
 }
 
+static public boolean equiv(char c1, char c2) {
+    return c1 == c2;
+}
+
 static public boolean pcequiv(Object k1, Object k2){
 	if(k1 instanceof IPersistentCollection)
 		return ((IPersistentCollection)k1).equiv(k2);
@@ -109,6 +113,16 @@ static public int compare(Object k1, Object k2){
 static public int hash(Object o){
 	if(o == null)
 		return 0;
+	return o.hashCode();
+}
+
+static public int hasheq(Object o){
+	if(o == null)
+		return 0;
+	if(o instanceof Number)
+		return Numbers.hasheq((Number)o);
+	else if(o instanceof IHashEq)
+		return ((IHashEq)o).hasheq();
 	return o.hashCode();
 }
 

@@ -461,6 +461,8 @@ static class DefExpr implements Expr{
 				}
 			IPersistentMap mm = sym.meta();
 			boolean isDynamic = RT.booleanCast(RT.get(mm,dynamicKey));
+			if(isDynamic)
+			   v.setDynamic();
             if(!isDynamic && sym.name.startsWith("*") && sym.name.endsWith("*") && sym.name.length() > 1)
                 {
                 RT.errPrintWriter().format("Warning: %1$s not declared dynamic and thus is not dynamically rebindable, "
@@ -769,8 +771,9 @@ static public abstract class HostExpr implements Expr, MaybePrimitiveExpr{
 					{
 					if(returnType == int.class)
 						{
-						gen.visitInsn(I2L);
-						gen.invokeStatic(NUMBERS_TYPE, Method.getMethod("Number num(long)"));
+						gen.invokeStatic(INTEGER_TYPE, intValueOfMethod);
+//						gen.visitInsn(I2L);
+//						gen.invokeStatic(NUMBERS_TYPE, Method.getMethod("Number num(long)"));
 						}
 					else if(returnType == float.class)
 						{
@@ -1364,8 +1367,8 @@ static class InstanceMethodExpr extends MethodExpr{
 		if(method == null && RT.booleanCast(RT.WARN_ON_REFLECTION.deref()))
 			{
 			RT.errPrintWriter()
-		      .format("Reflection warning, %s:%d - call to %s can't be resolved.\n",
-					  SOURCE_PATH.deref(), line, methodName);
+		      .format("Reflection warning, %s:%d - call to %s can't be resolved with arguments of type %s.\n",
+					  SOURCE_PATH.deref(), line, methodName, signatureString(exprsClasses(args)));
 			}
 	}
 
@@ -1513,8 +1516,8 @@ static class StaticMethodExpr extends MethodExpr{
 		if(method == null && RT.booleanCast(RT.WARN_ON_REFLECTION.deref()))
 			{
 			RT.errPrintWriter()
-              .format("Reflection warning, %s:%d - call to %s can't be resolved.\n",
-                      SOURCE_PATH.deref(), line, methodName);
+              .format("Reflection warning, %s:%d - call to %s can't be resolved with arguments of type %s.\n",
+                      SOURCE_PATH.deref(), line, methodName, signatureString(exprsClasses(args)));
 			}
 	}
 
@@ -2261,12 +2264,39 @@ static public boolean subsumes(Class[] c1, Class[] c2){
 	return better;
 }
 
+static String expandArrayClassname (Class c) {
+    if (c == null) {
+        return "nil";
+    } else if (c.isArray()) {
+        return expandArrayClassname(c.getComponentType()) + "[]";
+    } else {
+        return c.getName();
+    }
+}
+
+static String signatureString (List classes) {
+    StringBuilder sb = new StringBuilder("(");
+    for (int i = 0, len = classes.size(); i < len; i++) {
+        sb.append(expandArrayClassname((Class)classes.get(i)));
+        if (i < len - 1) sb.append(", ");
+    }
+    return sb.append(")").toString();
+}
+
+static List<Class> exprsClasses (IPersistentVector exprs) {
+    PersistentVector v = PersistentVector.EMPTY;
+    for (int i = 0, len = exprs.count(); i < len; i++) {
+        v = v.cons(((Expr)exprs.nth(i)).getJavaClass());
+    }
+    return v;
+}
+
 static int getMatchingParams(String methodName, ArrayList<Class[]> paramlists, IPersistentVector argexprs,
                              List<Class> rets)
 		{
 	//presumes matching lengths
 	int matchIdx = -1;
-	boolean tied = false;
+	int tiedIdx = -1;
     boolean foundExact = false;
 	for(int i = 0; i < paramlists.size(); i++)
 		{
@@ -2287,7 +2317,7 @@ static int getMatchingParams(String methodName, ArrayList<Class[]> paramlists, I
             {
             if(!foundExact || matchIdx == -1 || rets.get(matchIdx).isAssignableFrom(rets.get(i)))
                 matchIdx = i;
-            tied = false;
+            tiedIdx = -1;
             foundExact = true;
             }
 		else if(match && !foundExact)
@@ -2299,7 +2329,7 @@ static int getMatchingParams(String methodName, ArrayList<Class[]> paramlists, I
 				if(subsumes(paramlists.get(i), paramlists.get(matchIdx)))
 					{
 					matchIdx = i;
-					tied = false;
+					tiedIdx = -1;
 					}
 				else if(Arrays.equals(paramlists.get(matchIdx), paramlists.get(i)))
 					{
@@ -2307,12 +2337,15 @@ static int getMatchingParams(String methodName, ArrayList<Class[]> paramlists, I
 						matchIdx = i;
 					}
 				else if(!(subsumes(paramlists.get(matchIdx), paramlists.get(i))))
-						tied = true;
+						tiedIdx = i;
 				}
 			}
 		}
-	if(tied)
-		throw new IllegalArgumentException("More than one matching method found: " + methodName);
+	if(tiedIdx != -1)
+		throw new IllegalArgumentException("More than one matching method found: " +
+		        methodName + signatureString(Arrays.asList(paramlists.get(matchIdx))) + " and " +
+		        methodName + signatureString(Arrays.asList(paramlists.get(tiedIdx))) + " for arguments of type " +
+		        signatureString(exprsClasses(argexprs)));
 
 	return matchIdx;
 }
@@ -2345,7 +2378,7 @@ public static class NewExpr implements Expr{
 				}
 			}
 		if(ctors.isEmpty())
-			throw new IllegalArgumentException("No matching ctor found for " + c);
+			throw new IllegalArgumentException("No matching ctor found for " + c + " with " + args.count() + " arguments");
 
 		int ctoridx = 0;
 		if(ctors.size() > 1)
@@ -2357,8 +2390,8 @@ public static class NewExpr implements Expr{
 		if(ctor == null && RT.booleanCast(RT.WARN_ON_REFLECTION.deref()))
 			{
 			RT.errPrintWriter()
-              .format("Reflection warning, %s:%d - call to %s ctor can't be resolved.\n",
-                      SOURCE_PATH.deref(), line, c.getName());
+              .format("Reflection warning, %s:%d - call to %s ctor can't be resolved with arguments of type %s.\n",
+                      SOURCE_PATH.deref(), line, c.getName(), signatureString(exprsClasses(args)));
 			}
 	}
 
@@ -6783,7 +6816,7 @@ static Var lookupVar(Symbol sym, boolean internNew) {
 				//introduce a new var in the current ns
 				if(internNew)
 					var = currentNS().intern(Symbol.intern(sym.name));
-				}
+					}
 			else if(o instanceof Var)
 				{
 				var = (Var) o;

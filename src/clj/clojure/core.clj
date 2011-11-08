@@ -270,10 +270,9 @@
    :added "1.0"}
  defn (fn defn [&form &env name & fdecl]
         ;; Note: Cannot delegate this check to def because of the call to (with-meta name ..)
-        ;; Same as (if (not (symbol? name)
-        (if (if (instance? clojure.lang.Symbol name) false true)
-          (throw (IllegalArgumentException. "First argument to defn must be a symbol"))
-          nil)
+        (if (instance? clojure.lang.Symbol name)
+          nil
+          (throw (IllegalArgumentException. "First argument to defn must be a symbol")))
         (let [m (if (string? (first fdecl))
                   {:doc (first fdecl)}
                   {})

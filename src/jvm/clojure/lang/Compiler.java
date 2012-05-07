@@ -3308,6 +3308,7 @@ static class InvokeExpr implements Expr{
 	public final IPersistentVector args;
 	public final int line;
 	public final String source;
+	public final IPersistentMap meta;
 	public boolean isProtocol = false;
 	public boolean isDirect = false;
 	public int siteIndex = -1;
@@ -3316,11 +3317,12 @@ static class InvokeExpr implements Expr{
 	static Keyword onKey = Keyword.intern("on");
 	static Keyword methodMapKey = Keyword.intern("method-map");
 
-	public InvokeExpr(String source, int line, Symbol tag, Expr fexpr, IPersistentVector args) {
+	public InvokeExpr(String source, int line, Symbol tag, Expr fexpr, IPersistentVector args, IPersistentMap meta) {
 		this.source = source;
 		this.fexpr = fexpr;
 		this.args = args;
 		this.line = line;
+		this.meta = meta;
 		if(fexpr instanceof VarExpr)
 			{
 			Var fvar = ((VarExpr)fexpr).var;
@@ -3551,7 +3553,7 @@ static class InvokeExpr implements Expr{
 //			throw new IllegalArgumentException(
 //					String.format("No more than %d args supported", MAX_POSITIONAL_ARITY));
 
-		return new InvokeExpr((String) SOURCE.deref(), (Integer) LINE.deref(), tagOf(form), fexpr, args);
+		return new InvokeExpr((String) SOURCE.deref(), (Integer) LINE.deref(), tagOf(form), fexpr, args, RT.meta(form));
 	}
 }
 

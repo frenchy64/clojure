@@ -10,6 +10,14 @@
   <url>http://clojure.org/</url>
   <description>Clojure core environment and runtime library.</description>
 
+  <distributionManagement>
+    <repository>
+      <id>clojars</id>
+      <name>Clojars repository</name>
+      <url>https://clojars.org/repo</url>
+    </repository>
+  </distributionManagement>
+
   <developers>
     <developer>
       <name>Rich Hickey</name>

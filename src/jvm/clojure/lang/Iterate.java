@@ -14,19 +14,30 @@ package clojure.lang;
 
 public class Iterate extends ASeq implements IReduce {
 
+private static final Object UNREALIZED_NSEED = new Object();
 private final IFn f;      // never null
 private final Object seed;
+private volatile Object _nseed;  // cached
 private volatile ISeq _next;  // cached
 
 private Iterate(IFn f, Object seed){
     this.f = f;
     this.seed = seed;
+    this._nseed = seed;
 }
 
 private Iterate(IPersistentMap meta, IFn f, Object seed){
     super(meta);
     this.f = f;
     this.seed = seed;
+    this._nseed = seed;
+}
+
+private Iterate(IPersistentMap meta, IFn f, Object seed, Object _nseed){
+    super(meta);
+    this.f = f;
+    this.seed = seed;
+    this._nseed = _nseed;
 }
 
 public static ISeq create(IFn f, Object seed){
@@ -34,18 +45,21 @@ public static ISeq create(IFn f, Object seed){
 }
 
 public Object first(){
-    return seed;
+    if(_nseed == UNREALIZED_NSEED) {
+      _nseed = f.invoke(seed);
+    }
+    return _nseed;
 }
 
 public ISeq next(){
     if(_next == null) {
-        _next = new Iterate(f, f.invoke(seed));
+        _next = new Iterate(null, f, _nseed, UNREALIZED_NSEED);
     }
     return _next;
 }
 
 public Iterate withMeta(IPersistentMap meta){
-    return new Iterate(meta, f, seed);
+    return new Iterate(meta, f, seed, _nseed);
 }
 
 public Object reduce(IFn rf){

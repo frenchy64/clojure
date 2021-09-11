@@ -526,12 +526,6 @@
   (when c
     (cons c (super-chain (.getSuperclass c)))))
 
-(defn- pref
-  ([] nil)
-  ([a] a) 
-  ([^Class a ^Class b]
-     (if (.isAssignableFrom a b) b a)))
-
 (defn find-protocol-impl [protocol x]
   (if (instance? (:on-interface protocol) x)
     x
@@ -539,8 +533,33 @@
           impl #(get (:impls protocol) %)]
       (or (impl c)
           (and c (or (first (remove nil? (map impl (butlast (super-chain c)))))
-                     (when-let [t (reduce1 pref (filter impl (disj (supers c) Object)))]
-                       (impl t))
+                     ;; find the first interface that extends the protocol via a depth-first search of c's
+                     ;; interface hierarchy at each superclass level (with interfaces sorted by name at each level),
+                     ;; then continue the search and replace the most-specific interface
+                     ;; each time a new subinterface of the most-specific interface is found that also extends the protocol.
+                     (let [find-most-specific-interface
+                           (fn find-most-specific-interface [^Class most-specific ^Class c]
+                             (if (identical? Object c)
+                               most-specific
+                               (let [search-interfaces (fn [most-specific]
+                                                         (let [interfaces (.getInterfaces c)
+                                                               _ (sort-by #(.getName ^Class %) interfaces)]
+                                                           (areduce interfaces i acc most-specific
+                                                                    (find-most-specific-interface acc (aget interfaces i)))))
+                                     most-specific (if-some [candidate (when (and (.isInterface c)
+                                                                                  (impl c))
+                                                                         c)]
+                                                     (if most-specific
+                                                       (if (.isAssignableFrom most-specific candidate)
+                                                         candidate ;; most specific we'll find down this path
+                                                         (search-interfaces most-specific))
+                                                       candidate) ;; most specific we'll find down this path
+                                                     (search-interfaces most-specific))]
+                                 (if (.isInterface c)
+                                   most-specific
+                                   (recur most-specific (.getSuperclass c))))))]
+                       (when-some [t (find-most-specific-interface nil c)]
+                         (impl t)))
                      (impl Object)))))))
 
 (defn find-protocol-method [protocol methodk x]

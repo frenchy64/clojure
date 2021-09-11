@@ -13,7 +13,29 @@
   (:require [clojure.test-clojure.protocols.more-examples :as other]
             [clojure.set :as set]
             clojure.test-helper)
-  (:import [clojure.test_clojure.protocols.examples ExampleInterface]))
+  (:import [clojure.test_clojure.protocols.examples ExampleInterface]
+           [clojure.test_clojure.protocols
+            JavaProtocolExtension
+            JavaProtocolExtension$JInterface1
+            JavaProtocolExtension$JInterface2
+            JavaProtocolExtension$JInterfaceExtends1
+            JavaProtocolExtension$JInterfaceExtends2
+            JavaProtocolExtension$JExtension1
+            JavaProtocolExtension$JExtension2
+            JavaProtocolExtension$JExtension3
+            JavaProtocolExtension$JExtension4
+            JavaProtocolExtension$JExtension5
+            JavaProtocolExtension$JExtension6
+            JavaProtocolExtension$JExtension7
+            JavaProtocolExtension$JExtension8
+            JavaProtocolExtension$JExtension9
+            JavaProtocolExtension$JExtension10
+            JavaProtocolExtension$JExtension11
+            JavaProtocolExtension$JExtension12
+            JavaProtocolExtension$JSubExtension1
+            JavaProtocolExtension$JSubExtension2
+            JavaProtocolExtension$JSubExtension3
+            JavaProtocolExtension$JSubExtension4]))
 
 ;; temporary hack until I decide how to cleanly reload protocol
 ;; this no longer works
@@ -674,3 +696,245 @@
 (deftest test-leading-dashes
   (is (= 10 (-do-dashed (Dashed.))))
   (is (= [10] (map -do-dashed [(Dashed.)]))))
+
+(definterface Interface1)
+(definterface Interface2)
+(defprotocol PUnambiguous
+  (unambiguous-method [this]))
+
+(extend-protocol PUnambiguous
+  Interface1
+  (unambiguous-method [_] :Interface1)
+  Interface2
+  (unambiguous-method [_] :Interface2)
+  JavaProtocolExtension$JInterface1
+  (unambiguous-method [_] :JInterface1)
+  JavaProtocolExtension$JInterface2
+  (unambiguous-method [_] :JInterface2)
+  JavaProtocolExtension$JInterfaceExtends1
+  (unambiguous-method [_] :JInterfaceExtends1)
+  JavaProtocolExtension$JInterfaceExtends2
+  (unambiguous-method [_] :JInterfaceExtends2))
+
+(deftype TExtension1 [] JavaProtocolExtension$JInterface1 JavaProtocolExtension$JInterface2)
+(defrecord RExtension1 [] JavaProtocolExtension$JInterface1 JavaProtocolExtension$JInterface2)
+(deftype TExtension2 [] JavaProtocolExtension$JInterface2 JavaProtocolExtension$JInterface1)
+(defrecord RExtension2 [] JavaProtocolExtension$JInterface2 JavaProtocolExtension$JInterface1)
+(deftype TExtension3 [] JavaProtocolExtension$JInterfaceExtends1 JavaProtocolExtension$JInterface1)
+(defrecord RExtension3 [] JavaProtocolExtension$JInterfaceExtends1 JavaProtocolExtension$JInterface1)
+(deftype TExtension4 [] JavaProtocolExtension$JInterface1 JavaProtocolExtension$JInterfaceExtends1)
+(defrecord RExtension4 [] JavaProtocolExtension$JInterface1 JavaProtocolExtension$JInterfaceExtends1)
+(deftype TExtension5 [] JavaProtocolExtension$JInterfaceExtends1 JavaProtocolExtension$JInterfaceExtends2)
+(defrecord RExtension5 [] JavaProtocolExtension$JInterfaceExtends1 JavaProtocolExtension$JInterfaceExtends2)
+(deftype TExtension6 [] JavaProtocolExtension$JInterfaceExtends2 JavaProtocolExtension$JInterfaceExtends1)
+(defrecord RExtension6 [] JavaProtocolExtension$JInterfaceExtends2 JavaProtocolExtension$JInterfaceExtends1)
+(deftype TExtension7 [] JavaProtocolExtension$JInterface2 JavaProtocolExtension$JInterfaceExtends2)
+(defrecord RExtension7 [] JavaProtocolExtension$JInterface2 JavaProtocolExtension$JInterfaceExtends2)
+(deftype TExtension8 [] JavaProtocolExtension$JInterfaceExtends2 JavaProtocolExtension$JInterface2)
+(defrecord RExtension8 [] JavaProtocolExtension$JInterfaceExtends2 JavaProtocolExtension$JInterface2)
+(deftype TExtension9 []
+   JavaProtocolExtension$JInterface1
+   JavaProtocolExtension$JInterfaceExtends1
+   JavaProtocolExtension$JInterface2
+   JavaProtocolExtension$JInterfaceExtends2)
+(defrecord RExtension9 []
+   JavaProtocolExtension$JInterface1
+   JavaProtocolExtension$JInterfaceExtends1
+   JavaProtocolExtension$JInterface2
+   JavaProtocolExtension$JInterfaceExtends2)
+(deftype TExtension10 []
+   JavaProtocolExtension$JInterface2
+   JavaProtocolExtension$JInterfaceExtends2
+   JavaProtocolExtension$JInterface1
+   JavaProtocolExtension$JInterfaceExtends1)
+(defrecord RExtension10 []
+   JavaProtocolExtension$JInterface2
+   JavaProtocolExtension$JInterfaceExtends2
+   JavaProtocolExtension$JInterface1
+   JavaProtocolExtension$JInterfaceExtends1)
+(deftype TExtension11 []
+   JavaProtocolExtension$JInterface2
+   JavaProtocolExtension$JInterfaceExtends1
+   JavaProtocolExtension$JInterface1
+   JavaProtocolExtension$JInterfaceExtends2)
+(defrecord RExtension11 []
+   JavaProtocolExtension$JInterface2
+   JavaProtocolExtension$JInterfaceExtends1
+   JavaProtocolExtension$JInterface1
+   JavaProtocolExtension$JInterfaceExtends2)
+(deftype TExtension12 []
+   JavaProtocolExtension$JInterfaceExtends1
+   JavaProtocolExtension$JInterface1
+   JavaProtocolExtension$JInterfaceExtends2
+   JavaProtocolExtension$JInterface2)
+(defrecord RExtension12 []
+   JavaProtocolExtension$JInterfaceExtends1
+   JavaProtocolExtension$JInterface1
+   JavaProtocolExtension$JInterfaceExtends2
+   JavaProtocolExtension$JInterface2)
+
+;; Note: reify, proxy, deftype, defrecord seem to (deterministically?) sort interfaces at declaration, so
+;; results are different than Java.
+(deftest clj-2656-nondeterministic-interface-dispatch-test
+  (is (= :Interface1 (unambiguous-method (reify Interface1 Interface2))))
+  (is (= :Interface1 (unambiguous-method (reify Interface2 Interface1))))
+  (is (= :Interface1 (unambiguous-method (proxy [Interface1 Interface2] []))))
+  (is (= :Interface1 (unambiguous-method (proxy [Interface2 Interface1] []))))
+  (testing "JInterface1, JInterface2"
+    (is (= :JInterface1 (unambiguous-method (JavaProtocolExtension$JExtension1.))))
+    (is (= :JInterface1 (unambiguous-method (reify JavaProtocolExtension$JInterface1 JavaProtocolExtension$JInterface2))))
+    (is (= :JInterface1 (unambiguous-method (proxy [JavaProtocolExtension$JInterface1 JavaProtocolExtension$JInterface2] []))))
+    (is (= :JInterface1 (unambiguous-method (TExtension1.))))
+    (is (= :JInterface1 (unambiguous-method (RExtension1.)))))
+  (testing "JInterface2, JInterface1"
+    (is (= :JInterface1 (unambiguous-method (JavaProtocolExtension$JExtension2.))))
+    (is (= :JInterface1 (unambiguous-method (reify JavaProtocolExtension$JInterface2 JavaProtocolExtension$JInterface1))))
+    (is (= :JInterface1 (unambiguous-method (proxy [JavaProtocolExtension$JInterface2 JavaProtocolExtension$JInterface1] []))))
+    (is (= :JInterface1 (unambiguous-method (TExtension2.))))
+    (is (= :JInterface1 (unambiguous-method (RExtension2.)))))
+  (testing "JInterfaceExtends1, JInterface1"
+    (is (= :JInterfaceExtends1 (unambiguous-method (JavaProtocolExtension$JExtension3.))))
+    (is (= :JInterfaceExtends1 (unambiguous-method (reify JavaProtocolExtension$JInterfaceExtends1 JavaProtocolExtension$JInterface1))))
+    (is (= :JInterfaceExtends1 (unambiguous-method (proxy [JavaProtocolExtension$JInterfaceExtends1 JavaProtocolExtension$JInterface1] []))))
+    (is (= :JInterfaceExtends1 (unambiguous-method (TExtension3.))))
+    (is (= :JInterfaceExtends1 (unambiguous-method (RExtension3.)))))
+  (testing "JInterface1, JInterfaceExtends1"
+    (is (= :JInterfaceExtends1 (unambiguous-method (JavaProtocolExtension$JExtension4.))))
+    (is (= :JInterfaceExtends1 (unambiguous-method (reify JavaProtocolExtension$JInterface1 JavaProtocolExtension$JInterfaceExtends1))))
+    (is (= :JInterfaceExtends1 (unambiguous-method (proxy [JavaProtocolExtension$JInterface1 JavaProtocolExtension$JInterfaceExtends1] []))))
+    (is (= :JInterfaceExtends1 (unambiguous-method (TExtension4.))))
+    (is (= :JInterfaceExtends1 (unambiguous-method (RExtension4.)))))
+  (testing "JInterfaceExtends1, JInterfaceExtends2"
+    (is (= :JInterfaceExtends1 (unambiguous-method (JavaProtocolExtension$JExtension5.))))
+    (is (= :JInterfaceExtends1 (unambiguous-method (reify JavaProtocolExtension$JInterfaceExtends1 JavaProtocolExtension$JInterfaceExtends2))))
+    (is (= :JInterfaceExtends1 (unambiguous-method (proxy [JavaProtocolExtension$JInterfaceExtends1 JavaProtocolExtension$JInterfaceExtends2] []))))
+    (is (= :JInterfaceExtends1 (unambiguous-method (TExtension5.))))
+    (is (= :JInterfaceExtends1 (unambiguous-method (RExtension5.)))))
+  (testing "JInterfaceExtends2, JInterfaceExtends1"
+    (is (= :JInterfaceExtends1 (unambiguous-method (JavaProtocolExtension$JExtension6.))))
+    (is (= :JInterfaceExtends1 (unambiguous-method (reify JavaProtocolExtension$JInterfaceExtends2 JavaProtocolExtension$JInterfaceExtends1))))
+    (is (= :JInterfaceExtends1 (unambiguous-method (proxy [JavaProtocolExtension$JInterfaceExtends2 JavaProtocolExtension$JInterfaceExtends1] []))))
+    (is (= :JInterfaceExtends1 (unambiguous-method (TExtension6.))))
+    (is (= :JInterfaceExtends1 (unambiguous-method (RExtension6.)))))
+  (testing "JInterface2, JInterfaceExtends2"
+    (is (= :JInterfaceExtends2 (unambiguous-method (JavaProtocolExtension$JExtension7.))))
+    (is (= :JInterfaceExtends2 (unambiguous-method (reify
+                                                     JavaProtocolExtension$JInterface2
+                                                     JavaProtocolExtension$JInterfaceExtends2))))
+    (is (= :JInterfaceExtends2 (unambiguous-method (proxy [JavaProtocolExtension$JInterface2
+                                                           JavaProtocolExtension$JInterfaceExtends2]
+                                                     []))))
+    (is (= :JInterfaceExtends2 (unambiguous-method (TExtension7.))))
+    (is (= :JInterfaceExtends2 (unambiguous-method (RExtension7.)))))
+  (testing "JInterfaceExtends2, JInterface2"
+    (is (= :JInterfaceExtends2 (unambiguous-method (JavaProtocolExtension$JExtension8.))))
+    (is (= :JInterfaceExtends2 (unambiguous-method (reify
+                                                     JavaProtocolExtension$JInterfaceExtends2
+                                                     JavaProtocolExtension$JInterface2))))
+    (is (= :JInterfaceExtends2 (unambiguous-method (proxy [JavaProtocolExtension$JInterfaceExtends2
+                                                           JavaProtocolExtension$JInterface2]
+                                                     []))))
+    (is (= :JInterfaceExtends2 (unambiguous-method (TExtension8.))))
+    (is (= :JInterfaceExtends2 (unambiguous-method (RExtension8.)))))
+  (testing "JInterface1, JInterfaceExtends1, JInterface2, JInterfaceExtends2"
+    (is (= :JInterfaceExtends1 (unambiguous-method (JavaProtocolExtension$JExtension9.))))
+    (is (= :JInterfaceExtends1 (unambiguous-method (reify
+                                                     JavaProtocolExtension$JInterface1
+                                                     JavaProtocolExtension$JInterfaceExtends1
+                                                     JavaProtocolExtension$JInterface2
+                                                     JavaProtocolExtension$JInterfaceExtends2))))
+    (is (= :JInterfaceExtends1 (unambiguous-method (proxy [JavaProtocolExtension$JInterface1
+                                                           JavaProtocolExtension$JInterfaceExtends1
+                                                           JavaProtocolExtension$JInterface2
+                                                           JavaProtocolExtension$JInterfaceExtends2]
+                                                     []))))
+    (is (= :JInterfaceExtends1 (unambiguous-method (TExtension9.))))
+    (is (= :JInterfaceExtends1 (unambiguous-method (RExtension9.)))))
+  (testing "JInterface2, JInterfaceExtends2, JInterface1, JInterfaceExtends1"
+    (is (= :JInterfaceExtends1 (unambiguous-method (JavaProtocolExtension$JExtension10.))))
+    (is (= :JInterfaceExtends1 (unambiguous-method (reify
+                                                     JavaProtocolExtension$JInterface2
+                                                     JavaProtocolExtension$JInterfaceExtends2
+                                                     JavaProtocolExtension$JInterface1
+                                                     JavaProtocolExtension$JInterfaceExtends1))))
+    (is (= :JInterfaceExtends1 (unambiguous-method (proxy [JavaProtocolExtension$JInterface2
+                                                           JavaProtocolExtension$JInterfaceExtends2
+                                                           JavaProtocolExtension$JInterface1
+                                                           JavaProtocolExtension$JInterfaceExtends1]
+                                                     []))))
+    (is (= :JInterfaceExtends1 (unambiguous-method (TExtension10.))))
+    (is (= :JInterfaceExtends1 (unambiguous-method (RExtension10.)))))
+  (testing "JInterface2, JInterfaceExtends1, JInterface1, JInterfaceExtends2"
+    (is (= :JInterfaceExtends1 (unambiguous-method (JavaProtocolExtension$JExtension11.))))
+    (is (= :JInterfaceExtends1 (unambiguous-method (reify
+                                                     JavaProtocolExtension$JInterface2
+                                                     JavaProtocolExtension$JInterfaceExtends1
+                                                     JavaProtocolExtension$JInterface1
+                                                     JavaProtocolExtension$JInterfaceExtends1))))
+    (is (= :JInterfaceExtends1 (unambiguous-method (proxy [JavaProtocolExtension$JInterface2
+                                                           JavaProtocolExtension$JInterfaceExtends1
+                                                           JavaProtocolExtension$JInterface1
+                                                           JavaProtocolExtension$JInterfaceExtends2]
+                                                     []))))
+    (is (= :JInterfaceExtends1 (unambiguous-method (TExtension11.))))
+    (is (= :JInterfaceExtends1 (unambiguous-method (RExtension11.)))))
+  (testing "JInterfaceExtends1, JInterface1, JInterfaceExtends2, JInterface2"
+    (is (= :JInterfaceExtends1 (unambiguous-method (JavaProtocolExtension$JExtension12.))))
+    (is (= :JInterfaceExtends1 (unambiguous-method (reify
+                                                     JavaProtocolExtension$JInterfaceExtends1
+                                                     JavaProtocolExtension$JInterface1
+                                                     JavaProtocolExtension$JInterfaceExtends2
+                                                     JavaProtocolExtension$JInterface2))))
+    (is (= :JInterfaceExtends1 (unambiguous-method (proxy [JavaProtocolExtension$JInterfaceExtends1
+                                                           JavaProtocolExtension$JInterface1
+                                                           JavaProtocolExtension$JInterfaceExtends2
+                                                           JavaProtocolExtension$JInterface2]
+                                                     []))))
+    (is (= :JInterfaceExtends1 (unambiguous-method (TExtension12.))))
+    (is (= :JInterfaceExtends1 (unambiguous-method (RExtension12.)))))
+  (testing "extends JExtension1"
+    (is (= :JInterface1 (unambiguous-method (JavaProtocolExtension$JSubExtension1.))))
+    (is (= :JInterface1 (unambiguous-method (proxy [JavaProtocolExtension$JExtension1] [])))))
+  (testing "extends JExtension2"
+    (is (= :JInterface1 (unambiguous-method (JavaProtocolExtension$JSubExtension2.))))
+    (is (= :JInterface1 (unambiguous-method (proxy [JavaProtocolExtension$JExtension2] [])))))
+  (testing "extends JExtension10 implements JInterface1"
+    (is (= :JInterfaceExtends1 (unambiguous-method (JavaProtocolExtension$JSubExtension4.))))
+    (is (= :JInterfaceExtends1 (unambiguous-method (proxy [JavaProtocolExtension$JExtension10
+                                                           JavaProtocolExtension$JInterface1] [])))))
+  (doseq [i (range 50 #_10000)
+          flip [true false]
+          :let [g (gensym 'clojure.test-clojure.protocols)]]
+    (testing [i flip]
+      (binding [*ns* *ns*]
+        ((eval 
+           (list 'do
+                 `(ns ~g
+                    (:require ~'[clojure.test :refer [is]]))
+                 (if flip
+                   '(do (definterface A)
+                        (definterface B))
+                   '(do (definterface B)
+                        (definterface A)))
+                 '(do (defprotocol P
+                        (a [this]))
+                      (extend-protocol P
+                        A
+                        (a [this] :a)
+                        B
+                        (a [this] :b))
+                      (deftype T1 [] A B)
+                      (deftype T2 [] B A)
+                      (defrecord R1 [] A B)
+                      (defrecord R2 [] B A)
+                      (fn []
+                        (dotimes [_ 5]
+                          (is (= :b (a (reify B))))
+                          (is (= :a (a (reify A B))))
+                          (is (= :a (a (reify B A))))
+                          (is (= :b (a (proxy [B] []))))
+                          (is (= :a (a (proxy [A B] []))))
+                          (is (= :a (a (proxy [B A] []))))
+                          (is (= :a (a (->T1))))
+                          (is (= :a (a (->T2))))))))))))
+    (remove-ns g)))

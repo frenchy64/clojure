@@ -263,6 +263,36 @@
 ;   [float-array, int-array, etc]
 ;   amap, areduce
 
+(deftest test-areduce
+  (testing "without aname"
+    (is (= [1 2 3]
+           (let [a (int-array [1 2 3])]
+             (areduce a
+                      i
+                      acc []
+                      (conj acc (aget a i)))))))
+  (testing "with aname"
+    (is (= [1 2 3]
+           (areduce a (int-array [1 2 3])
+                    i
+                    acc []
+                    (conj acc (aget a i))))))
+  (testing "hygiene"
+    (testing "aname shadows idx, but only in expr"
+      (let [the-array (int-array [1 2 3])]
+        (is (= (repeat 3 the-array)
+               (areduce a the-array
+                        a
+                        acc []
+                        (conj acc a))))))
+    (testing "aname shadows ret, but only in expr"
+      (is (= [1 2 3]
+             (let [res (atom [])]
+               (areduce a (int-array [1 2 3])
+                        i
+                        a []
+                        (swap! res conj (aget a i)))))))))
+
 (defmacro deftest-type-array [type-array type]
   `(deftest ~(symbol (str "test-" type-array))
       ; correct type

@@ -5275,16 +5275,18 @@
          ~ret))))
 
 (defmacro areduce
-  "Reduces an expression across an array a, using an index named idx,
-  and return value named ret, initialized to init, setting ret to the 
-  evaluation of expr at each step, returning ret."
+  "Reduces an expression across an array a named (if provided) aname,
+  using an index named idx, and return value named ret, initialized to init,
+  setting ret to the evaluation of expr at each step, returning ret."
   {:added "1.0"}
-  [a idx ret init expr]
-  `(let [a# ~a l# (alength a#)]
-     (loop  [~idx 0 ~ret ~init]
-       (if (< ~idx l#)
-         (recur (unchecked-inc-int ~idx) ~expr)
-         ~ret))))
+  ([a idx ret init expr]
+   `(areduce ~(gensym "aname") ~a ~idx ~ret ~init ~expr))
+  ([aname a idx ret init expr]
+   `(let [a# ~a l# (alength a#)]
+      (loop [~idx 0 ~ret ~init]
+        (if (< ~idx l#)
+          (recur (unchecked-inc-int ~idx) (let [~aname a#] ~expr))
+          ~ret)))))
 
 (defn float-array
   "Creates an array of floats"

@@ -242,6 +242,50 @@
                ))
   )
 
+;Note: if renaming this macro, be sure to update the
+; condp "local shadowing macro" test case accordingly.
+(defmacro binary-macro
+  [a b]
+  [a b])
+
+; CLJ-2162
+(deftest test-condp-macros+inlines
+  (is (= [2 1]
+         (condp binary-macro 1
+           2 :>> identity)))
+  (is (= :default
+         (condp and 1
+           false :branch
+           :default)))
+  (is (= :default
+         (condp and false
+           1 :branch
+           :default)))
+  (is (= :branch
+         (condp or false
+           1 :branch
+           :default)))
+  (is (= :default
+         (condp or false
+           false :branch
+           :default)))
+  (is (= :branch
+         (condp and 1
+           1 :branch
+           :default)))
+  (let [x :x]
+    (is (condp identical? x
+          x true)))
+  (testing "local shadowing inline"
+    (let [identical? (constantly :local)]
+      (is (= :local
+             (condp identical? 1
+               1 :>> identity)))))
+  (testing "local shadowing macro"
+    (let [binary-macro (constantly :local)]
+      (is (= :local
+             (condp binary-macro 1
+               1 :>> identity))))))
 
 ; [for, doseq (for.clj)]
 

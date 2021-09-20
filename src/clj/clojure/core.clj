@@ -6380,7 +6380,7 @@ fails, attempts to require sym's namespace and retries."
           ret)))))
 
 (defmacro condp
-  "Takes a binary predicate, an expression, and a set of clauses.
+  "Takes a binary predicate (or macro symbol), an expression, and a set of clauses.
   Each clause can take the form of either:
 
   test-expr result-expr
@@ -6403,6 +6403,15 @@ fails, attempts to require sym's namespace and retries."
   [pred expr & clauses]
   (let [gpred (gensym "pred__")
         gexpr (gensym "expr__")
+        inline-pred (when (symbol? pred)
+                      (let [^clojure.lang.Var v (resolve &env pred)]
+                        (when (instance? clojure.lang.Var v)
+                          (when (or (.isMacro v)
+                                    (let [vm (meta v)]
+                                      (and (:inline vm)
+                                           (when-some [ia (:inline-arities vm)]
+                                             (ia 2)))))
+                            (symbol v)))))
         emit (fn emit [pred expr args]
                (let [[[a b c :as clause] more]
                        (split-at (if (= :>> (second args)) 3 2) args)
@@ -6416,9 +6425,9 @@ fails, attempts to require sym's namespace and retries."
                   :else `(if-let [p# (~pred ~a ~expr)]
                            (~c p#)
                            ~(emit pred expr more)))))]
-    `(let [~gpred ~pred
+    `(let [~@(when-not inline-pred [gpred pred])
            ~gexpr ~expr]
-       ~(emit gpred gexpr clauses))))
+       ~(emit (or inline-pred gpred) gexpr clauses))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; var documentation ;;;;;;;;;;;;;;;;;;;;;;;;;;
 

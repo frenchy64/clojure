@@ -13,7 +13,8 @@
   (:use clojure.test)
   (:require [clojure.inspector]
             [clojure.set :as set])
-  (:import java.util.Base64))
+  (:import java.util.Base64
+           [compilation InterfaceWithDefaultMethods]))
 
 ; http://clojure.org/java_interop
 ; http://clojure.org/compilation
@@ -159,6 +160,19 @@
     (is (hash b))))
 
 ; proxy, proxy-super
+
+(deftest test-proxy-default-method
+  (try (is (= 1 (.baz (proxy [InterfaceWithDefaultMethods] []) 1)))
+       (catch Exception e
+         (is false (pr-str e))))
+  ;; I don't think this can be fixed?
+  ;; https://clojuredocs.org/clojure.core/proxy#example-542692d4c026201cdc327040
+  (try (is (= 1 (.bar (proxy [InterfaceWithDefaultMethods] []
+                        (bar [o] o))
+                      1
+                      2)))
+       (catch Exception e
+         (is false e))))
 
 (deftest test-proxy-chain
   (testing "That the proxy functions can chain"

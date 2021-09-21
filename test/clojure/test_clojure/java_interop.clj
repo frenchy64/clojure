@@ -13,7 +13,8 @@
   (:use clojure.test)
   (:require [clojure.inspector]
             [clojure.set :as set])
-  (:import java.util.Base64))
+  (:import java.util.Base64
+           [compilation InterfaceWithDefaultMethods]))
 
 ; http://clojure.org/java_interop
 ; http://clojure.org/compilation
@@ -159,6 +160,9 @@
     (is (hash b))))
 
 ; proxy, proxy-super
+
+(deftest test-proxy-default-method
+  (is (= 1 (.baz (proxy [InterfaceWithDefaultMethods] []) 1))))
 
 (deftest test-proxy-chain
   (testing "That the proxy functions can chain"

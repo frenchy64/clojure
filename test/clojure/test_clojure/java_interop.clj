@@ -589,3 +589,7 @@
   (is (= (char \a) \a)))
 
 ;; Note: More coercions in numbers.clj
+
+; CLJ-2261
+(deftest test-dot-extra-args
+  (is (thrown? Exception (. "xyz" (substring 1) (throw :bug?)))))

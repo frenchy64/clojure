@@ -642,6 +642,27 @@
         (is (= 2 (.hinted r 1)))
         (is (= "xoxo" (.hinted r "xo")))))))
 
+;; see CLJ-1796
+(defprotocol IntermediateProt
+  (intermediate-method [this]))
+
+(def intermediate-method1 intermediate-method)
+
+(extend-protocol IntermediateProt
+  String
+  (intermediate-method [_] :ok))
+
+(def intermediate-method2 intermediate-method)
+
+(deftest test-protocol-can-see-future-extensions
+  (let [v "foo"]
+    (is (= intermediate-method
+           intermediate-method1
+           intermediate-method2))
+    (is (= :ok
+           (intermediate-method v)
+           (intermediate-method1 v)
+           (intermediate-method2 v)))))
 
 ; see CLJ-845
 (defprotocol SyntaxQuoteTestProtocol

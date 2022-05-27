@@ -589,8 +589,7 @@
   (let [methodk (keyword method)
         gthis (with-meta (gensym) {:tag 'clojure.lang.AFunction})
         ginterf (gensym)]
-    `(fn [cache#]
-       (let [~ginterf
+      `(let [~ginterf
              (fn
                ~@(map 
                   (fn [args]
@@ -623,6 +622,7 @@
                                 (f# ~@gargs)
                                 ((-cache-protocol-fn ~gthis ~target ~on-interface ~ginterf) ~@gargs)))))))
                   arglists))]
+       (fn [cache#]
          (set! (.__methodImplCache f#) cache#)
          f#))))
 

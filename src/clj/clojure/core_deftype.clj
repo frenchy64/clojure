@@ -67,8 +67,9 @@
       (throw (IllegalArgumentException. (apply print-str "Unsupported option(s) -" bad-opts))))
     [interfaces methods opts]))
 
-(defmacro reify 
-  "reify is a macro with the following structure:
+(defmacro reify
+  "reify creates an object implementing a protocol or interface.
+  reify is a macro with the following structure:
 
  (reify options* specs*)
   
@@ -651,7 +652,15 @@
             [opts sigs]))
         sigs (when sigs
                (reduce1 (fn [m s]
-                          (let [name-meta (meta (first s))
+                          (let [tag-to-class (fn [tag]
+                                               (if-let [c (and (instance? clojure.lang.Symbol tag)
+                                                            (= (.indexOf (.getName ^clojure.lang.Symbol tag) ".") -1)
+                                                            (not (contains? '#{int long float double char short byte boolean void
+                                                                               ints longs floats doubles chars shorts bytes booleans objects} tag))
+                                                            (resolve tag))]
+                                                 (symbol (.getName c))
+                                                 tag))
+                                name-meta (update-in (meta (first s)) [:tag] tag-to-class)
                                 mname (with-meta (first s) nil)
                                 [arglists doc]
                                 (loop [as [] rs (rest s)]

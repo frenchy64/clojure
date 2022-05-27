@@ -1134,6 +1134,18 @@
   ([x y & more]
    (reduce1 min (min x y) more)))
 
+(defn abs
+  {:doc "Returns the absolute value of a.
+  If a is Long/MIN_VALUE => Long/MIN_VALUE
+  If a is a double and zero => +0.0
+  If a is a double and ##Inf or ##-Inf => ##Inf
+  If a is a double and ##NaN => ##NaN"
+   :inline-arities #{1}
+   :inline (fn [a] `(clojure.lang.Numbers/abs ~a))
+   :added "1.11"}
+  [a]
+  (clojure.lang.Numbers/abs a))
+
 (defn dec'
   "Returns a number one less than num. Supports arbitrary precision.
   See also: dec"
@@ -1494,7 +1506,8 @@
   [coll key] (. clojure.lang.RT (contains coll key)))
 
 (defn get
-  "Returns the value mapped to key, not-found or nil if key not present."
+  "Returns the value mapped to key, not-found or nil if key not present
+  in associative collection, set, string, array, or ILookup instance."
   {:inline (fn  [m k & nf] `(. clojure.lang.RT (get ~m ~k ~@nf)))
    :inline-arities #{2 3}
    :added "1.0"}
@@ -5947,26 +5960,25 @@
         opts (apply hash-map options)
         {:keys [as reload reload-all require use verbose as-alias]} opts
         loaded (contains? @*loaded-libs* lib)
-        load (cond reload-all
-                   load-all
-                   (or reload (not require) (not loaded))
-                   load-one)
         need-ns (or as use)
+        load (cond reload-all load-all
+                   reload load-one
+                   (not loaded) (cond need-ns load-one
+                                      as-alias (fn [lib _need _require] (create-ns lib))
+                                      :else load-one))
+
         filter-opts (select-keys opts '(:exclude :only :rename :refer))
         undefined-on-entry (not (find-ns lib))]
     (binding [*loading-verbosely* (or *loading-verbosely* verbose)]
-      (if as-alias
-        (when (not (find-ns lib))
-          (create-ns lib))
-        (if load
-          (try
-            (load lib need-ns require)
-            (catch Exception e
-              (when undefined-on-entry
-                (remove-ns lib))
-              (throw e)))
-          (throw-if (and need-ns (not (find-ns lib)))
-            "namespace '%s' not found" lib)))
+      (if load
+        (try
+          (load lib need-ns require)
+          (catch Exception e
+            (when undefined-on-entry
+              (remove-ns lib))
+            (throw e)))
+        (throw-if (and need-ns (not (find-ns lib)))
+          "namespace '%s' not found" lib))
       (when (and need-ns *loading-verbosely*)
         (printf "(clojure.core/in-ns '%s)\n" (ns-name *ns*)))
       (when as
@@ -6472,7 +6484,10 @@ fails, attempts to require sym's namespace and retries."
   Supported options:
   :elide-meta - a collection of metadata keys to elide during compilation.
   :disable-locals-clearing - set to true to disable clearing, useful for using a debugger
-  Alpha, subject to change."
+  :direct-linking - set to true to use direct static invocation of functions, rather than vars
+    Note that call sites compiled with direct linking will not be affected by var redefinition.
+    Use ^:redef (or ^:dynamic) on a var to prevent direct linking and allow redefinition.
+  See https://clojure.org/reference/compilation for more information."
   {:added "1.4"})
 
 (add-doc-and-meta *ns*
@@ -6686,7 +6701,7 @@ fails, attempts to require sym's namespace and retries."
                       (next ks) (next vs))
                     m))
         assoc-multi (fn [m h bucket]
-                      (let [testexprs (apply concat bucket)
+                      (let [testexprs (mapcat (fn [kv] [(list 'quote (first kv)) (second kv)]) bucket)
                             expr `(condp = ~expr-sym ~@testexprs ~default)]
                         (assoc m h expr)))
         hmap (reduce1
@@ -6843,6 +6858,13 @@ fails, attempts to require sym's namespace and retries."
   {:added "1.9"}
   [x] (instance? java.util.UUID x))
 
+(defn random-uuid
+  {:doc "Returns a pseudo-randomly generated java.util.UUID instance (i.e. type 4).
+
+  See: https://docs.oracle.com/javase/8/docs/api/java/util/UUID.html#randomUUID--"
+   :added "1.11"}
+  ^java.util.UUID [] (java.util.UUID/randomUUID))
+
 (defn reduce
   "f should be a function of 2 arguments. If val is not supplied,
   returns the result of applying f to the first 2 items in coll, then
@@ -6938,7 +6960,11 @@ fails, attempts to require sym's namespace and retries."
        (reduce conj to from)))
   ([to xform from]
      (if (instance? clojure.lang.IEditableCollection to)
-       (with-meta (persistent! (transduce xform conj! (transient to) from)) (meta to))
+       (let [tm (meta to)
+             rf (fn
+                  ([coll] (-> (persistent! coll) (with-meta tm)))
+                  ([coll v] (conj! coll v)))]
+         (transduce xform rf (transient to) from))
        (transduce xform conj to from))))
 
 (defn mapv
@@ -7757,6 +7783,52 @@ fails, attempts to require sym's namespace and retries."
   (reduce #(proc %2) nil coll)
   nil)
 
+(defn iteration
+  "Creates a seqable/reducible via repeated calls to step,
+  a function of some (continuation token) 'k'. The first call to step
+  will be passed initk, returning 'ret'. Iff (somef ret) is true,
+  (vf ret) will be included in the iteration, else iteration will
+  terminate and vf/kf will not be called. If (kf ret) is non-nil it
+  will be passed to the next step call, else iteration will terminate.
+
+  This can be used e.g. to consume APIs that return paginated or batched data.
+
+   step - (possibly impure) fn of 'k' -> 'ret'
+
+   :somef - fn of 'ret' -> logical true/false, default 'some?'
+   :vf - fn of 'ret' -> 'v', a value produced by the iteration, default 'identity'
+   :kf - fn of 'ret' -> 'next-k' or nil (signaling 'do not continue'), default 'identity'
+   :initk - the first value passed to step, default 'nil'
+
+  It is presumed that step with non-initk is unreproducible/non-idempotent.
+  If step with initk is unreproducible it is on the consumer to not consume twice."
+  {:added "1.11"}
+  [step & {:keys [somef vf kf initk]
+            :or {vf identity
+                 kf identity
+                 somef some?
+                 initk nil}}]
+  (reify
+   clojure.lang.Seqable
+   (seq [_]
+        ((fn next [ret]
+           (when (somef ret)
+             (cons (vf ret)
+                   (when-some [k (kf ret)]
+                     (lazy-seq (next (step k)))))))
+         (step initk)))
+   clojure.lang.IReduceInit
+   (reduce [_ rf init]
+           (loop [acc init
+                  ret (step initk)]
+             (if (somef ret)
+               (let [acc (rf acc (vf ret))]
+                 (if (reduced? acc)
+                   @acc
+                   (if-some [k (kf ret)]
+                     (recur acc (step k))
+                     acc)))
+               acc)))))
 
 (defn tagged-literal?
   "Return true if the value is the data representation of a tagged literal"
@@ -7964,3 +8036,70 @@ fails, attempts to require sym's namespace and retries."
                         m))]
     (with-meta ret (meta m))))
 
+(defn- parsing-err
+  "Construct message for parsing for non-string parsing error"
+  ^String [val]
+  (str "Expected string, got " (if (nil? val) "nil" (-> val class .getName))))
+
+(defn parse-long
+  {:doc "Parse string of decimal digits with optional leading -/+ and return a
+  Long value, or nil if parse fails"
+   :added "1.11"}
+  ^Long [^String s]
+  (if (string? s)
+    (try
+      (Long/valueOf s)
+      (catch NumberFormatException _ nil))
+    (throw (IllegalArgumentException. (parsing-err s)))))
+
+(defn parse-double
+  {:doc "Parse string with floating point components and return a Double value,
+  or nil if parse fails.
+
+  Grammar: https://docs.oracle.com/javase/8/docs/api/java/lang/Double.html#valueOf-java.lang.String-"
+   :added "1.11"}
+  ^Double [^String s]
+  (if (string? s)
+    (try
+      (Double/valueOf s)
+      (catch NumberFormatException _ nil))
+    (throw (IllegalArgumentException. (parsing-err s)))))
+
+(defn parse-uuid
+  {:doc "Parse a string representing a UUID and return a java.util.UUID instance,
+  or nil if parse fails.
+
+  Grammar: https://docs.oracle.com/javase/8/docs/api/java/util/UUID.html#toString--"
+   :added "1.11"}
+  ^java.util.UUID [^String s]
+  (try
+    (java.util.UUID/fromString s)
+    (catch IllegalArgumentException _ nil)))
+
+(defn parse-boolean
+  {:doc "Parse strings \"true\" or \"false\" and return a boolean, or nil if invalid"
+   :added "1.11"}
+  [^String s]
+  (if (string? s)
+    (case s
+      "true" true
+      "false" false
+      nil)
+    (throw (IllegalArgumentException. (parsing-err s)))))
+
+(defn NaN?
+  {:doc "Returns true if num is NaN, else false"
+   :inline-arities #{1}
+   :inline (fn [num] `(Double/isNaN ~num))
+   :added "1.11"}
+
+  [^double num]
+  (Double/isNaN num))
+
+(defn infinite?
+  {:doc "Returns true if num is negative or positive infinity, else false"
+   :inline-arities #{1}
+   :inline (fn [num] `(Double/isInfinite ~num))
+   :added "1.11"}
+  [^double num]
+  (Double/isInfinite num))

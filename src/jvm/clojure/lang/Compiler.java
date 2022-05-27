@@ -1612,8 +1612,16 @@ static class InstanceMethodExpr extends MethodExpr{
 				gen.invokeInterface(type, m);
 			else
 				gen.invokeVirtual(type, m);
-			//if(context != C.STATEMENT || method.getReturnType() == Void.TYPE)
-			HostExpr.emitBoxReturn(objx, gen, method.getReturnType());
+			Class retClass = method.getReturnType();
+			if(context == C.STATEMENT)
+				{
+				if(retClass == long.class || retClass == double.class)
+					gen.pop2();
+				else if(retClass != void.class)
+					gen.pop();
+				}
+			else
+				HostExpr.emitBoxReturn(objx, gen, retClass);
 			}
 		else
 			{
@@ -1627,9 +1635,9 @@ static class InstanceMethodExpr extends MethodExpr{
 				method.emitClearLocals(gen);
 				}
 			gen.invokeStatic(REFLECTOR_TYPE, invokeInstanceMethodMethod);
+			if(context == C.STATEMENT)
+				gen.pop();
 			}
-		if(context == C.STATEMENT)
-			gen.pop();
 	}
 
 	public boolean hasJavaClass(){
@@ -6016,9 +6024,14 @@ public static class LocalBindingExpr implements Expr, MaybePrimitiveExpr, Assign
 	public LocalBindingExpr(LocalBinding b, Symbol tag)
             {
 		if(b.getPrimitiveType() != null && tag != null)
-			throw new UnsupportedOperationException("Can't type hint a primitive local");
+			if(! b.getPrimitiveType().equals(tagClass(tag)))
+				throw new UnsupportedOperationException("Can't type hint a primitive local with a different type");
+			else
+				this.tag = null;
+		else
+			this.tag = tag;
+
 		this.b = b;
-		this.tag = tag;
 
         this.clearPath = (PathNode)CLEAR_PATH.get();
         this.clearRoot = (PathNode)CLEAR_ROOT.get();
@@ -7649,7 +7662,7 @@ public static Object load(Reader rdr, String sourcePath, String sourceName) {
 	catch(Throwable e)
 		{
 		if(!(e instanceof CompilerException))
-			throw new CompilerException(sourcePath, (Integer) LINE_BEFORE.deref(), (Integer) COLUMN_BEFORE.deref(), e);
+			throw new CompilerException(sourcePath, (Integer) LINE_BEFORE.deref(), (Integer) COLUMN_BEFORE.deref(), null, CompilerException.PHASE_EXECUTION, e);
 		else
 			throw (CompilerException) e;
 		}

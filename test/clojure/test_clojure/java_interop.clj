@@ -627,7 +627,7 @@
 
 ; CLJ-2261
 (deftest test-dot-extra-args
-  (is (thrown? Exception (. "xyz" (substring 1) (throw :bug?)))))
+  (is (thrown? Exception (eval (. "xyz" (substring 1) (throw :bug?))))))
 
 ; Test that primitive boxing elision in statement context works
 ; correctly (CLJ-2621)

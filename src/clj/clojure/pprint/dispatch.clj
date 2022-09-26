@@ -264,7 +264,7 @@
           (when-let [references (next references)]
             (pprint-newline :linear)
             (recur references)))))
-    (write-out alis)))
+    (pprint-simple-list alis)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Format something that looks like a simple def (sans metadata, since the reader

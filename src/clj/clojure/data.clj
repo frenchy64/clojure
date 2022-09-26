@@ -103,6 +103,9 @@
   [s]
   (if (set? s) s (into #{} s)))
 
+(defn- distinct-map-keys [a b]
+  (distinct (concat (keys a) (keys b))))
+
 (extend-protocol Diff
   java.util.Set
   (diff-similar
@@ -119,7 +122,7 @@
   
   java.util.Map
   (diff-similar [a b]
-    (diff-associative a b (set/union (keys a) (keys b)))))
+    (diff-associative a b (distinct-map-keys a b))))
 
 (defn diff
   "Recursively compares a and b, returning a tuple of

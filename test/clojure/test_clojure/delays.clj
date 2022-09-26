@@ -19,7 +19,7 @@
     (dotimes [_ threads]
         (->
             (Thread.
-                (fn []
+                (bound-fn []
                     (.await barrier)
                     (dotimes [_ 10000]
                         (is (= 1 @d)))
@@ -54,7 +54,7 @@
     (dotimes [_ threads]
         (->
             (Thread.
-                (fn []
+                (bound-fn []
                     (.await barrier)
                     (let [first-result (try-call)]
                         (dotimes [_ 10000]

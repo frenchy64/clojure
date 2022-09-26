@@ -776,7 +776,9 @@ static final class TransientVector extends AFn implements ITransientVector, ITra
 		//note - relies on ensureEditable in nth
 		if(Util.isInteger(arg1))
 			return nth(((Number) arg1).intValue());
-		throw new IllegalArgumentException("Key must be integer");
+		throw new IllegalArgumentException("Must invoke transient vector with integer key, given "
+		                                   + (arg1 == null ? "nil" : arg1.getClass().getName())
+		                                   + ".");
 	}
 
 	public Object nth(int i){
@@ -816,7 +818,9 @@ static final class TransientVector extends AFn implements ITransientVector, ITra
 			int i = ((Number) key).intValue();
 			return assocN(i, val);
 			}
-		throw new IllegalArgumentException("Key must be integer");
+		throw new IllegalArgumentException("Must associate transient vector with integer key, given "
+		                                   + (key == null ? "nil" : key.getClass().getName())
+		                                   + ".");
 	}
 
 	private Node doAssoc(int level, Node node, int i, Object val){

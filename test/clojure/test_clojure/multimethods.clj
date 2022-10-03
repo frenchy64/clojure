@@ -277,8 +277,13 @@
 (defmethod disp-first Long [target & _] (inc target))
 (defmethod disp-first :default [target & args] [target (take 10 args)])
 
+(defmulti throws-on-inf (fn []))
+
 (deftest inf-args-test
   (is (= [:inf-args (range 10)]
          (apply inf-args (range))))
   (is (= 2 (apply disp-first 1 (range))))
-  (is (= [::foo (range 10)] (apply disp-first ::foo (range)))))
+  (is (= [::foo (range 10)] (apply disp-first ::foo (range))))
+  (is (thrown-with-msg? clojure.lang.ArityException
+                        #"Wrong number of args \(21\+\) passed to:.*"
+                        (apply throws-on-inf (range)))))

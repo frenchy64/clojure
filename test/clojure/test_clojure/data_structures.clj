@@ -1375,9 +1375,8 @@
    clojure.lang.PersistentTreeMap (sorted-map 0 1)
    clojure.lang.PersistentTreeSet (sorted-set 0)
    clojure.lang.MapEntry (first (hash-map 0 0 1 2))
-   clojure.lang.Symbol 'a
-   #_#_
-   clojure.lang.Var (def unbound-var)})
+   ;; not a collection, but similar enough to include here
+   clojure.lang.Symbol 'a})
 
 (run! (fn [[c v]] (assert (instance? c v) [c v])) invoke-colls)
 

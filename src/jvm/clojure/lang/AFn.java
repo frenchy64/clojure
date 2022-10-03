@@ -14,12 +14,7 @@ package clojure.lang;
 
 public abstract class AFn implements IFn {
 
-// #{} == no information
-// #{0 2 4} == supports fixed arguments 0, 2, 4
-// #{0 2 4 "rest"} == supports fixed arguments 0, 2, 4, and has a rest argument after 20 args
-public IPersistentSet supportedArities() {
-	return PersistentHashMap.EMPTY;
-}
+public final Class clojure_lang_AFn_onlyFixedArgs = null;
 
 public Object call() {
 	return invoke();
@@ -407,10 +402,12 @@ static public Object applyToHelper(IFn ifn, ISeq arglist) {
 					, Util.ret1((arglist = arglist.next()).first(),arglist = null)
 			);
 		default:
-      IPersistentSet supported = supportedArities().get(this.class);
-      if (supported != null && !supported.isEmpty() && !supported.contains("rest")) {
-        int i = RT.boundedLength(arglist, 20);
-        throw new ArityException((i == 20) ? -1 : i+20, name);
+      if (ifn instanceof AFn) {
+        AFn afn = (AFn)ifn;
+        if (afn.getClass() == afn.clojure_lang_AFn_onlyFixedArgs) {
+          int i = RT.boundedLength(arglist, 20);
+          afn.throwArity((20 == i) ? -1 : i+20);
+        }
       }
 			return ifn.invoke(arglist.first()
 					, (arglist = arglist.next()).first()

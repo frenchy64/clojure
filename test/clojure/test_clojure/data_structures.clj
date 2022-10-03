@@ -1399,10 +1399,10 @@
 
 (def should-work-with-2-args
   #{clojure.lang.PersistentArrayMap
-    clojure.lang.PersistentHashMap$TransientHashMap
-    clojure.lang.PersistentTreeMap
     clojure.lang.PersistentArrayMap$TransientArrayMap
     clojure.lang.PersistentHashMap
+    clojure.lang.PersistentHashMap$TransientHashMap
+    clojure.lang.PersistentTreeMap
     clojure.lang.PersistentHashSet$TransientHashSet})
 
 (deftest inf-args-test

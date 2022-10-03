@@ -57,22 +57,22 @@
           (eval '(fn))))))
 
 (deftest fixed-arg-fn-infinite-args
-  (doseq [i (range 1 40)]
+  (doseq [i (range 1 21)]
     (testing i
       (is (thrown-with-msg? clojure.lang.ArityException
                             (re-pattern
                               (format "Wrong number of args \\(%s\\) passed to:.*"
                                       i))
                             (apply (fn []) (range i))))))
-  (doseq [i (range 40 80)]
+  (doseq [i (range 21 80)]
     (testing i
       (is (thrown-with-msg? clojure.lang.ArityException
-                            #"Wrong number of args \(21+\) passed to:.*"
+                            #"Wrong number of args \(21[+]\) passed to:.*"
                             (apply (fn []) (range i))))))
   (is (thrown-with-msg? clojure.lang.ArityException
-                        #"Wrong number of args \(21+\) passed to:.*"
+                        #"Wrong number of args \(21[+]\) passed to:.*"
                         (apply (fn []) (range))))
   (are [?f] (thrown-with-msg? clojure.lang.ArityException
-                              #"Wrong number of args \(21+\) passed to:.*"
+                              #"Wrong number of args \(21[+]\) passed to:.*"
                               (apply ?f (range)))
        identity fnil (map identity) (keep identity)))

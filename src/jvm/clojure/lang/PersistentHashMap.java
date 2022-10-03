@@ -317,6 +317,10 @@ static final class TransientHashMap extends ATransientMap {
 		this.nullValue = nullValue;
 	}
 
+  public Class clojure_lang_AFn_onlyFixedArgs() {
+    return TransientHashMap.class;
+  }
+
 	ITransientMap doAssoc(Object key, Object val) {
 		if (key == null) {
 			if (this.nullValue != val)

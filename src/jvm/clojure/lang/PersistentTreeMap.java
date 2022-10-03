@@ -93,6 +93,10 @@ static public PersistentTreeMap create(Comparator comp, ISeq items){
 	return (PersistentTreeMap) ret;
 }
 
+public Class clojure_lang_AFn_onlyFixedArgs() {
+  return PersistentTreeMap.class;
+}
+
 public boolean containsKey(Object key){
 	return entryAt(key) != null;
 }

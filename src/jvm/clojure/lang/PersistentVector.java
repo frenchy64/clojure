@@ -137,6 +137,10 @@ PersistentVector(IPersistentMap meta, int cnt, int shift, Node root, Object[] ta
 	this.tail = tail;
 }
 
+public Class clojure_lang_AFn_onlyFixedArgs() {
+  return PersistentVector.class;
+}
+
 public TransientVector asTransient(){
 	return new TransientVector(this);
 }
@@ -613,6 +617,10 @@ static final class TransientVector extends AFn implements ITransientVector, ITra
 	TransientVector(PersistentVector v){
 		this(v.cnt, v.shift, editableRoot(v.root), editableTail(v.tail));
 	}
+
+  public Class clojure_lang_AFn_onlyFixedArgs() {
+    return TransientVector.class;
+  }
 
 	public int count(){
 		ensureEditable();

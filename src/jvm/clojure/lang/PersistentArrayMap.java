@@ -37,6 +37,10 @@ static final int HASHTABLE_THRESHOLD = 16;
 public static final PersistentArrayMap EMPTY = new PersistentArrayMap();
 private final IPersistentMap _meta;
 
+public Class clojure_lang_AFn_onlyFixedArgs() {
+  return PersistentArrayMap.class;
+}
+
 static public IPersistentMap create(Map other){
 	ITransientMap ret = EMPTY.asTransient();
 	for(Object o : other.entrySet())
@@ -494,6 +498,10 @@ static final class TransientArrayMap extends ATransientMap {
 		System.arraycopy(array, 0, this.array, 0, array.length);
 		this.len = array.length;
 	}
+
+  public Class clojure_lang_AFn_onlyFixedArgs() {
+    return TransientArrayMap.class;
+  }
 	
 	private int indexOf(Object key){
 		for(int i = 0; i < len; i += 2)

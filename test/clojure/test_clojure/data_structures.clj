@@ -1413,6 +1413,14 @@
     (doseq [[c v] invoke-colls]
       (is ((if (should-work-with-2-args c) identity not)
            (supports-2-arg? v)) c)))
+  (testing "2 args works or throws ArityException"
+    (doseq [[c v] invoke-colls]
+      (testing v
+        (println "Calling" c "with infinite args...")
+        (is (thrown-with-msg? clojure.lang.ArityException
+                              #"Wrong number of args \(-1\) passed to:.*"
+                              (apply v (range)))
+            c))))
   (is (thrown-with-msg? clojure.lang.ArityException
                         #"Wrong number of args \(0\) passed to: clojure\.lang\.PersistentHashMap"
                         (apply (zipmap (range 100) (range 100)) [])))

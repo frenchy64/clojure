@@ -7,3 +7,15 @@ maven-classpath
 maven-classpath.properties
 .idea/
 *.iml
+.cpcache
+deps.edn
+.cpcache
+deps.edn
+.cpcache
+deps.edn
+.cpcache
+deps.edn
+.nrepl-port
+.cpcache
+deps.edn
+.nrepl-*

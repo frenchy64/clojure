@@ -30,5 +30,4 @@ public class ArityException extends IllegalArgumentException {
 		this.actual = actual;
 		this.name = name;
 	}
-
 }

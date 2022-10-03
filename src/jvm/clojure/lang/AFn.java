@@ -14,7 +14,13 @@ package clojure.lang;
 
 public abstract class AFn implements IFn {
 
-public final Class clojure_lang_AFn_onlyFixedArgs = null;
+// if your class Foo extends AFn and only implements fixed IFn/invoke arities,
+// return Foo.class. When passed more than 20 arguments via `apply`, instead
+// of walking the possibly infinite sequence of args, just throw an arity exception.
+// Returning null means "I don't know if this class implements rest args" and is the default.
+public Class clojure_lang_AFn_onlyFixedArgs() {
+  return null;
+}
 
 public Object call() {
 	return invoke();
@@ -404,11 +410,12 @@ static public Object applyToHelper(IFn ifn, ISeq arglist) {
 		default:
       if (ifn instanceof AFn) {
         AFn afn = (AFn)ifn;
-        if (afn.getClass() == afn.clojure_lang_AFn_onlyFixedArgs) {
-          int i = RT.boundedLength(arglist, 20);
-          afn.throwArity((20 == i) ? -1 : i+20);
+        if (afn.getClass() == afn.clojure_lang_AFn_onlyFixedArgs()) {
+          int i = RT.boundedLength(arglist, 40);
+          afn.throwArity((i < 40) ? i : -1);
         }
       }
+      System.out.println("done");
 			return ifn.invoke(arglist.first()
 					, (arglist = arglist.next()).first()
 					, (arglist = arglist.next()).first()

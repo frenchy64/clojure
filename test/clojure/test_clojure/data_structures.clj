@@ -1428,6 +1428,22 @@
                               (format "Wrong number of args \\(%s\\) passed to: clojure\\.lang\\.PersistentHashMap"
                                       i))
                             (apply (zipmap (range 100) (range 100)) (range i))))))
+  (doseq [i (range 3 38)]
+    (testing i
+      (is (thrown-with-msg? ArityException
+                            (re-pattern
+                              (format "Wrong number of args \\(%s\\) passed to: clojure\\.lang\\.PersistentHashMap"
+                                      i))
+                            (apply (zipmap (range 100) (range 100)) (range i))))))
+  (doseq [i (range 40 100)]
+    (is (thrown-with-msg? ArityException
+                          (re-pattern
+                            (format "Wrong number of args \\(%s\\) passed to: clojure\\.lang\\.PersistentHashMap"
+                                    -1))
+                          (apply (zipmap (range 100) (range 100)) (range i)))))
   (is (thrown-with-msg? ArityException
-                        #"fixme"
-                        (apply (zipmap (range 100) (range 100)) (range)))))
+                        (re-pattern
+                          (format "Wrong number of args \\(%s\\) passed to: clojure\\.lang\\.PersistentHashMap"
+                                  -1))
+                        (apply (zipmap (range 100) (range 100)) (range))))
+)

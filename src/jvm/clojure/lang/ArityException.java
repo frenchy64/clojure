@@ -26,7 +26,11 @@ public class ArityException extends IllegalArgumentException {
 	}
 
 	public ArityException(int actual, String name, Throwable cause) {
-		super("Wrong number of args (" + actual + ") passed to: " + Compiler.demunge(name), cause);
+		this(actual, name, cause, false);
+	}
+
+	public ArityException(int actual, String name, Throwable cause, boolean actualIsMinimum) {
+		super("Wrong number of args (" + actual + (actualIsMinimum ? "+" : "") + ") passed to: " + Compiler.demunge(name), cause);
 		this.actual = actual;
 		this.name = name;
 	}

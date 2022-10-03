@@ -412,8 +412,7 @@ static public Object applyToHelper(IFn ifn, ISeq arglist) {
         AFn afn = (AFn)ifn;
         if (afn instanceof AFunction || //assume that AFunction never has rest args
             afn.getClass() == afn.clojure_lang_AFn_onlyFixedArgs()) {
-          int i = RT.boundedLength(arglist, 40);
-          afn.throwArity((i < 40) ? i : -1);
+          afn.throwArity(21, true);
         }
       }
 			return ifn.invoke(arglist.first()
@@ -441,7 +440,10 @@ static public Object applyToHelper(IFn ifn, ISeq arglist) {
 }
 
 public Object throwArity(int n){
+  return throwArity(n, false);
+}
+public Object throwArity(int n, boolean nIsMinimum){
 	String name = getClass().getName();
-	throw new ArityException(n, name);
+	throw new ArityException(n, name, null, nIsMinimum);
 }
 }

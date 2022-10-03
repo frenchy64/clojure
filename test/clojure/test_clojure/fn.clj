@@ -9,7 +9,9 @@
 ; Author: Ambrose Bonnaire-Sergeant
 
 (ns clojure.test-clojure.fn
-  (:use clojure.test))
+  (:use clojure.test)
+  ;; for fails-with-cause?
+  (:require clojure.test-helper))
 
 (deftest fn-error-checking
   (testing "bad arglist"
@@ -53,3 +55,24 @@
     (is (fails-with-cause? clojure.lang.ExceptionInfo
           #"Call to clojure.core/fn did not conform to spec"
           (eval '(fn))))))
+
+(deftest fixed-arg-fn-infinite-args
+  (doseq [i (range 1 40)]
+    (testing i
+      (is (thrown-with-msg? clojure.lang.ArityException
+                            (re-pattern
+                              (format "Wrong number of args \\(%s\\) passed to:.*"
+                                      i))
+                            (apply (fn []) (range i))))))
+  (doseq [i (range 40 80)]
+    (testing i
+      (is (thrown-with-msg? clojure.lang.ArityException
+                            #"Wrong number of args \(-1\) passed to:.*"
+                            (apply (fn []) (range i))))))
+  (is (thrown-with-msg? clojure.lang.ArityException
+                        #"Wrong number of args \(-1\) passed to:.*"
+                        (apply (fn []) (range))))
+  (are [?f] (thrown-with-msg? clojure.lang.ArityException
+                              #"Wrong number of args \(-1\) passed to:.*"
+                              (apply ?f (range)))
+       identity fnil (map identity) (keep identity)))

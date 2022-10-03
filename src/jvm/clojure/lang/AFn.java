@@ -410,7 +410,8 @@ static public Object applyToHelper(IFn ifn, ISeq arglist) {
 		default:
       if (ifn instanceof AFn) {
         AFn afn = (AFn)ifn;
-        if (afn.getClass() == afn.clojure_lang_AFn_onlyFixedArgs()) {
+        if (afn instanceof AFunction || //assume that AFunction never has rest args
+            afn.getClass() == afn.clojure_lang_AFn_onlyFixedArgs()) {
           int i = RT.boundedLength(arglist, 40);
           afn.throwArity((i < 40) ? i : -1);
         }

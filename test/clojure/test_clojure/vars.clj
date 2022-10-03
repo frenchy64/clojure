@@ -107,3 +107,9 @@
                   1000 :timeout)))
   (is (= 0 (deref (future (apply #'sample (range)))
                   1000 :timeout))))
+
+(def unbound-var)
+
+(deftest unbound-var-inf-args-test
+  (is (thrown? clojure.lang.ArityException
+               (apply unbound-var (range)))))

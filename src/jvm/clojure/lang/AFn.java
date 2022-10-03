@@ -153,6 +153,10 @@ public Object applyTo(ISeq arglist) {
 }
 
 static public Object applyToHelper(IFn ifn, ISeq arglist) {
+  return applyToHelper(ifn, arglist, false, null);
+}
+
+static public Object applyToHelper(IFn ifn, ISeq arglist, final boolean knownNoRest, final String arityExceptionName) {
 	switch(RT.boundedLength(arglist, 20))
 		{
 		case 0:
@@ -409,11 +413,16 @@ static public Object applyToHelper(IFn ifn, ISeq arglist) {
 			);
 		default:
       if (ifn instanceof AFn) {
-        AFn afn = (AFn)ifn;
+        final AFn afn = (AFn)ifn;
         if (afn instanceof AFunction || //assume that AFunction never has rest args
             afn.getClass() == afn.clojure_lang_AFn_onlyFixedArgs()) {
           afn.throwArity(21, true);
         }
+      } else if (knownNoRest) {
+        throw new ArityException(21,
+                                 (arityExceptionName!=null ? arityExceptionName : ifn.getClass().toString()),
+                                 null,
+                                 true);
       }
 			return ifn.invoke(arglist.first()
 					, (arglist = arglist.next()).first()

@@ -274,7 +274,7 @@
 (defmethod inf-args :default [& args] [:inf-args (take 10 args)])
 
 (defmulti disp-first (fn [target & _] (class target)))
-(defmethod disp-first Long [target & args] (inc target))
+(defmethod disp-first Long [target & _] (inc target))
 (defmethod disp-first :default [target & args] [target (take 10 args)])
 
 (deftest inf-args-test

@@ -1418,7 +1418,7 @@
       (testing v
         (println "Calling" c "with infinite args...")
         (is (thrown-with-msg? clojure.lang.ArityException
-                              #"Wrong number of args \(-1\) passed to:.*"
+                              #"Wrong number of args \(21\+\) passed to:.*"
                               (apply v (range)))
             c))))
   (is (thrown-with-msg? clojure.lang.ArityException
@@ -1436,19 +1436,18 @@
                               (format "Wrong number of args \\(%s\\) passed to: clojure\\.lang\\.PersistentHashMap"
                                       i))
                             (apply (zipmap (range 100) (range 100)) (range i))))))
-  (doseq [i (range 3 38)]
+  (doseq [i (range 3 20)]
     (testing i
       (is (thrown-with-msg? ArityException
                             (re-pattern
                               (format "Wrong number of args \\(%s\\) passed to: clojure\\.lang\\.PersistentHashMap"
                                       i))
                             (apply (zipmap (range 100) (range 100)) (range i))))))
-  (doseq [i (range 40 100)]
-    (is (thrown-with-msg? ArityException
-                          (re-pattern
-                            (format "Wrong number of args \\(%s\\) passed to: clojure\\.lang\\.PersistentHashMap"
-                                    -1))
-                          (apply (zipmap (range 100) (range 100)) (range i)))))
+  (doseq [i (range 21 100)]
+    (testing i
+      (is (thrown-with-msg? ArityException
+                            #"Wrong number of args \(21\+\) passed to: clojure\.lang\.PersistentHashMap"
+                            (apply (zipmap (range 100) (range 100)) (range i))))))
   (is (thrown-with-msg? ArityException
                         (re-pattern
                           (format "Wrong number of args \\(%s\\) passed to: clojure\\.lang\\.PersistentHashMap"

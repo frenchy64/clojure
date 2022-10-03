@@ -1374,7 +1374,10 @@
    clojure.lang.PersistentHashSet$TransientHashSet (transient #{0})
    clojure.lang.PersistentTreeMap (sorted-map 0 1)
    clojure.lang.PersistentTreeSet (sorted-set 0)
-   clojure.lang.MapEntry (first (hash-map 0 0 1 2))})
+   clojure.lang.MapEntry (first (hash-map 0 0 1 2))
+   clojure.lang.Symbol 'a
+   #_#_
+   clojure.lang.Var (def unbound-var)})
 
 (run! (fn [[c v]] (assert (instance? c v) [c v])) invoke-colls)
 
@@ -1383,19 +1386,24 @@
        true
        (catch ArityException _ false)))
 
-(deftest supports-1-arg?-test
-  (is (supports-1-arg? [0]))
-  (doseq [[c v] invoke-colls]
-    (is (supports-1-arg? v) c)))
-
-(defn supports-2-arg? [f]
+(defn supports-2-args? [f]
   (try (f 0 0)
        true
        (catch ArityException _ false)))
 
-(deftest supports-2-arg?-test
-  (is (not (supports-2-arg? [0])))
-  (is (supports-2-arg? {0 0})))
+(def should-work-with-1-arg
+  #{clojure.lang.PersistentArrayMap
+    clojure.lang.PersistentArrayMap$TransientArrayMap
+    clojure.lang.PersistentHashMap
+    clojure.lang.PersistentHashMap$TransientHashMap
+    clojure.lang.PersistentVector
+    clojure.lang.PersistentVector$TransientVector
+    clojure.lang.PersistentHashSet
+    clojure.lang.PersistentHashSet$TransientHashSet
+    clojure.lang.PersistentTreeMap
+    clojure.lang.PersistentTreeSet
+    clojure.lang.MapEntry
+    clojure.lang.Symbol})
 
 (def should-work-with-2-args
   #{clojure.lang.PersistentArrayMap
@@ -1403,24 +1411,33 @@
     clojure.lang.PersistentHashMap
     clojure.lang.PersistentHashMap$TransientHashMap
     clojure.lang.PersistentTreeMap
-    clojure.lang.PersistentHashSet$TransientHashSet})
+    clojure.lang.PersistentHashSet$TransientHashSet
+    clojure.lang.Symbol})
 
-(deftest inf-args-test
-  (testing "1 args works"
-    (doseq [[c v] invoke-colls]
-      (is (supports-1-arg? v) c)))
+(deftest supports-1-arg?-test
+  (is (supports-1-arg? [0]))
+  (doseq [[c v] invoke-colls]
+    (is ((if (should-work-with-1-arg c) identity not)
+         (supports-1-arg? v))
+        c)))
+
+(deftest supports-2-arg?-test
+  (is (not (supports-2-args? [0])))
+  (is (supports-2-args? {0 0}))
   (testing "2 args works or throws ArityException"
     (doseq [[c v] invoke-colls]
       (is ((if (should-work-with-2-args c) identity not)
-           (supports-2-arg? v)) c)))
-  (testing "2 args works or throws ArityException"
-    (doseq [[c v] invoke-colls]
-      (testing v
-        (println "Calling" c "with infinite args...")
-        (is (thrown-with-msg? clojure.lang.ArityException
-                              #"Wrong number of args \(21\+\) passed to:.*"
-                              (apply v (range)))
-            c))))
+           (supports-2-args? v))
+          c))))
+
+(deftest inf-args-test
+  (doseq [[c v] invoke-colls]
+    (testing v
+      (println "Calling" c "with infinite args...")
+      (is (thrown-with-msg? clojure.lang.ArityException
+                            #"Wrong number of args \(21\+\) passed to:.*"
+                            (apply v (range)))
+          c)))
   (is (thrown-with-msg? clojure.lang.ArityException
                         #"Wrong number of args \(0\) passed to: clojure\.lang\.PersistentHashMap"
                         (apply (zipmap (range 100) (range 100)) [])))
@@ -1429,14 +1446,7 @@
   (is (thrown-with-msg? clojure.lang.ArityException
                         #"Wrong number of args \(3\) passed to: clojure\.lang\.PersistentHashMap"
                         (apply (zipmap (range 100) (range 100)) [1 2 3])))
-  (let [bump-me-to-101 22]
-    (doseq [i (range 3 bump-me-to-101)]
-      (is (thrown-with-msg? clojure.lang.ArityException
-                            (re-pattern
-                              (format "Wrong number of args \\(%s\\) passed to: clojure\\.lang\\.PersistentHashMap"
-                                      i))
-                            (apply (zipmap (range 100) (range 100)) (range i))))))
-  (doseq [i (range 3 20)]
+  (doseq [i (range 3 21)]
     (testing i
       (is (thrown-with-msg? ArityException
                             (re-pattern
@@ -1447,10 +1457,4 @@
     (testing i
       (is (thrown-with-msg? ArityException
                             #"Wrong number of args \(21\+\) passed to: clojure\.lang\.PersistentHashMap"
-                            (apply (zipmap (range 100) (range 100)) (range i))))))
-  (is (thrown-with-msg? ArityException
-                        (re-pattern
-                          (format "Wrong number of args \\(%s\\) passed to: clojure\\.lang\\.PersistentHashMap"
-                                  -1))
-                        (apply (zipmap (range 100) (range 100)) (range))))
-)
+                            (apply (zipmap (range 100) (range 100)) (range i)))))))

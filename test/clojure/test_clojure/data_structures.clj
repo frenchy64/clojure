@@ -1397,26 +1397,6 @@
   (is (not (supports-2-arg? [0])))
   (is (supports-2-arg? {0 0})))
 
-(comment
-  ((requiring-resolve 'clojure.pprint/pprint)
-   (group-by (fn [c]
-               (supports-2-arg? (invoke-colls c)))
-             (keys invoke-colls)))
-  {false
-   [clojure.lang.PersistentHashSet
-    clojure.lang.PersistentVector
-    clojure.lang.PersistentVector$TransientVector
-    clojure.lang.PersistentTreeSet
-    clojure.lang.MapEntry],
-   true
-   [clojure.lang.PersistentArrayMap
-    clojure.lang.PersistentHashMap$TransientHashMap
-    clojure.lang.PersistentTreeMap
-    clojure.lang.PersistentArrayMap$TransientArrayMap
-    clojure.lang.PersistentHashMap
-    clojure.lang.PersistentHashSet$TransientHashSet]}
-)
-
 (def should-work-with-2-args
   #{clojure.lang.PersistentArrayMap
     clojure.lang.PersistentHashMap$TransientHashMap
@@ -1425,16 +1405,14 @@
     clojure.lang.PersistentHashMap
     clojure.lang.PersistentHashSet$TransientHashSet})
 
-
 (deftest inf-args-test
   (testing "1 args works"
     (doseq [[c v] invoke-colls]
       (is (supports-1-arg? v) c)))
-  (testing "2 args works"
+  (testing "2 args works or throws ArityException"
     (doseq [[c v] invoke-colls]
       (is ((if (should-work-with-2-args c) identity not)
            (supports-2-arg? v)) c)))
-
   (is (thrown-with-msg? clojure.lang.ArityException
                         #"Wrong number of args \(0\) passed to: clojure\.lang\.PersistentHashMap"
                         (apply (zipmap (range 100) (range 100)) [])))

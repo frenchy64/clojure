@@ -415,7 +415,6 @@ static public Object applyToHelper(IFn ifn, ISeq arglist) {
           afn.throwArity((i < 40) ? i : -1);
         }
       }
-      System.out.println("done");
 			return ifn.invoke(arglist.first()
 					, (arglist = arglist.next()).first()
 					, (arglist = arglist.next()).first()

@@ -101,15 +101,20 @@
 
 (defn sample [& args]
   0)
+(defn sample-fixed [] 0)
+(def sample-map {})
+(def unbound-var)
 
 (deftest test-vars-apply-lazily
   (is (= 0 (deref (future (apply sample (range)))
                   1000 :timeout)))
   (is (= 0 (deref (future (apply #'sample (range)))
-                  1000 :timeout))))
-
-(def unbound-var)
-
-(deftest unbound-var-inf-args-test
+                  1000 :timeout)))
+  (is (thrown-with-msg? clojure.lang.ArityException
+                        #"Wrong number of args \(21\+\) passed to:"
+                        (apply #'sample-fixed (range))))
+  (is (thrown-with-msg? clojure.lang.ArityException
+                        #"Wrong number of args \(21\+\) passed to:"
+                        (apply #'sample-map (range))))
   (is (thrown? clojure.lang.ArityException
                (apply unbound-var (range)))))

@@ -9,13 +9,4 @@ maven-classpath.properties
 *.iml
 .cpcache
 deps.edn
-.cpcache
-deps.edn
-.cpcache
-deps.edn
-.cpcache
-deps.edn
-.nrepl-port
-.cpcache
-deps.edn
 .nrepl-*

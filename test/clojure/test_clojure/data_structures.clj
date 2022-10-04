@@ -1459,6 +1459,8 @@
                             (apply (zipmap (range 100) (range 100)) (range i)))))))
 
 (deftest subclasses-lose-inf-args-test
-  (apply (proxy [clojure.lang.MapEntry] [0 1])
-         ;;TODO update test to 25 after https://clojure.atlassian.net/browse/CLJ-2728
-         (range 21)))
+  (is (thrown-with-msg? ArityException
+                        ;;TODO update to (25) after https://clojure.atlassian.net/browse/CLJ-2728
+                        #"Wrong number of args \(21\) passed to:.*"
+                        (apply (proxy [clojure.lang.MapEntry] [0 1])
+                               (range 25)))))

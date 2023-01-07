@@ -618,7 +618,7 @@
                                 (f# ~@gargs)
                                 ((-cache-protocol-fn ~gthis ~target ~on-interface ~interf) ~@gargs)))))))
                   arglists))]
-           (fn [cache#]
+        (fn [cache#]
          (set! (.__methodImplCache f#) cache#)
          f#))))
 

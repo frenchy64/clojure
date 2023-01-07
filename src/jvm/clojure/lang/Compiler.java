@@ -3562,7 +3562,7 @@ static class StaticInvokeExpr implements Expr, MaybePrimitiveExpr{
 		java.lang.reflect.Method method = null;
 		for(java.lang.reflect.Method m : allmethods)
 			{
-			//System.out.println(m);
+			System.out.println("StaticInvokeExpr parse: var="+v+" method="+m);
 			if(Modifier.isStatic(m.getModifiers()) && m.getName().equals("invokeStatic"))
 				{
 				Class[] params = m.getParameterTypes();
@@ -3842,10 +3842,10 @@ static class InvokeExpr implements Expr{
                         .parse(v, RT.next(form), formtag != null ? formtag : sigtag != null ? sigtag : vtag, tailPosition);
                 if(ret != null)
                     {
-//				    System.out.println("invoke direct: " + v);
+				    System.out.println("invoke direct: " + v);
                     return ret;
                     }
-//                System.out.println("NOT direct: " + v);
+                System.out.println("NOT direct: " + v);
                 }
 			}
 

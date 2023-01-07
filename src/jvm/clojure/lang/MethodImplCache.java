@@ -19,11 +19,27 @@ public final class MethodImplCache{
 static public class Entry{
 	final public Class c;
 	final public IFn fn;
+  // private in case we need richer distinctions in the future.
+  // could also use an enum here.
+  final private boolean _isInterface;
 
 	public Entry(Class c, IFn fn){
 		this.c = c;
 		this.fn = fn;
+    // any code that calls this constructor will not use isInterface()
+    // as it was compiled using an older Clojure runtime.
+    this._isInterface = false;
 	}
+
+	public Entry(Class c, IFn fn, boolean isInterface){
+		this.c = c;
+		this.fn = fn;
+    this._isInterface = isInterface;
+	}
+
+  public boolean isInterface() {
+    return _isInterface;
+  }
 }
 
 public final IPersistentMap protocol;
@@ -60,19 +76,24 @@ public MethodImplCache(Symbol sym, IPersistentMap protocol, Keyword methodk, Map
     this.map = map;
 }
 
-public IFn fnFor(Class c){
+public Entry fnEntryFor(Class c){
 	Entry last = mre;
 	if(last != null && last.c == c)
-		return last.fn;
-	return findFnFor(c);
+		return last;
+	return findFnEntryFor(c);
 }
 
-IFn findFnFor(Class c){
+public IFn fnFor(Class c){
+	Entry e = fnEntryFor(c);
+  return e != null ? e.fn : null;
+}
+
+Entry findFnEntryFor(Class c){
     if (map != null)
         {
         Entry e = (Entry) map.get(c);
         mre = e;
-        return  e != null ? e.fn : null;
+        return e;
         }
     else
         {
@@ -81,11 +102,10 @@ IFn findFnFor(Class c){
             {
             Entry e = ((Entry) table[idx + 1]);
             mre = e;
-            return  e != null ? e.fn : null;
+            return e;
             }
         return null;
         }
 }
-
 
 }

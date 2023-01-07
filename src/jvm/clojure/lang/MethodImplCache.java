@@ -78,7 +78,7 @@ public MethodImplCache(Symbol sym, IPersistentMap protocol, Keyword methodk, Map
 
 public IFn fnFor(Class c){
 	Entry e = fnEntryFor(c);
-	return e != null ? e.fn : null;
+	return  e != null ? e.fn : null;
 }
 
 public Entry fnEntryFor(Class c){

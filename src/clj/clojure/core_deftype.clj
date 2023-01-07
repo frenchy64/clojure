@@ -597,8 +597,7 @@
                   (fn [args]
                     (let [gargs (map #(gensym (str "gf__" % "__")) args)
                           target (first gargs)
-                          interf `(fn [~@gargs] (. ~(with-meta target {:tag on-interface}) (~(or on-method method) ~@(rest gargs))))
-                          gf (gensym)]
+                          interf `(fn [~@gargs] (. ~(with-meta target {:tag on-interface}) (~(or on-method method) ~@(rest gargs))))]
                       (if extend-via-meta
                         `([~@gargs]
                             (let [cache# (.__methodImplCache ~gthis)

@@ -590,6 +590,7 @@
 
 (defn- emit-method-def [on-interface method on-method arglists extend-via-meta]
   (let [methodk (keyword method)
+        ;; extra var indirection per call if not directly linked
         gthis (with-meta method {:tag 'clojure.lang.AFunction})
         ginterf
             `(fn
@@ -695,9 +696,8 @@
      ~(when sigs
         `(#'assert-same-protocol (var ~name) '~(map :name (vals sigs))))
      ~@(map (fn [s]
-              (doto (emit-method-def (:on-interface opts) (:name s) (:on s) (:arglists s)
-                               (:extend-via-metadata opts))
-                prn))
+              (emit-method-def (:on-interface opts) (:name s) (:on s) (:arglists s)
+                               (:extend-via-metadata opts)))
             (vals sigs))
      (alter-var-root (var ~name) merge 
                      (assoc ~opts 

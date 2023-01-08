@@ -4050,7 +4050,6 @@ static public class FnExpr extends ObjExpr{
 				}
 
 			fn.canBeDirect = !fn.hasEnclosingMethod && fn.closes.count() == 0 && !usesThis;
-			//System.err.println("canBeDirect " + fn.name + "has-enclosing-method="+ fn.hasEnclosingMethod + " closes-count="+fn.closes.count()+" usesThis="+usesThis);
 
 			IPersistentCollection methods = null;
 			for(int i = 0; i < methodArray.length; i++)

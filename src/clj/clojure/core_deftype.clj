@@ -590,8 +590,8 @@
 
 (defn- emit-method-def [on-interface method on-method arglists extend-via-meta]
   (let [methodk (keyword method)
-        ;; extra var indirection per call if not directly linked
-        gthis (with-meta method {:tag 'clojure.lang.AFunction})
+        direct? (:direct-linking *compiler-options*)
+        gthis (with-meta (if direct? method (gensym method)) {:tag 'clojure.lang.AFunction})
         ginterf
             `(fn
                ~@(map 
@@ -602,7 +602,7 @@
                           (. ~(with-meta target {:tag on-interface}) (~(or on-method method) ~@(rest gargs))))))
                   arglists))]
           `(def ~(with-meta method nil)
-             (fn
+             (fn ~@(when-not direct? [gthis])
                ~@(map 
                   (fn [args]
                     (let [gargs (map #(gensym (str "gf__" % "__")) args)

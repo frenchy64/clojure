@@ -3613,7 +3613,7 @@ static class InvokeExpr implements Expr{
 	public final int line;
 	public final int column;
 	public final boolean tailPosition;
-  public final StaticInvokeExpr directLinkExpr;
+	public final StaticInvokeExpr directLinkExpr;
 	public final String source;
 	public boolean isProtocol = false;
 	public boolean isDirect = false;

@@ -3613,6 +3613,7 @@ static class InvokeExpr implements Expr{
 	public final int line;
 	public final int column;
 	public final boolean tailPosition;
+  public final Expr directLinkExpr;
 	public final String source;
 	public boolean isProtocol = false;
 	public boolean isDirect = false;
@@ -3636,13 +3637,14 @@ static class InvokeExpr implements Expr{
         return null;
         }
 
-	public InvokeExpr(String source, int line, int column, Symbol tag, Expr fexpr, IPersistentVector args, boolean tailPosition) {
+	public InvokeExpr(String source, int line, int column, Symbol tag, Expr fexpr, IPersistentVector args, boolean tailPosition, Expr directLinkExpr) {
 		this.source = source;
 		this.fexpr = fexpr;
 		this.args = args;
 		this.line = line;
 		this.column = column;
 		this.tailPosition = tailPosition;
+    this.directLinkExpr = directLinkExpr;
 
 		if(fexpr instanceof VarExpr)
 			{
@@ -3748,11 +3750,18 @@ static class InvokeExpr implements Expr{
 		gen.putStatic(objx.objtype, objx.cachedClassName(siteIndex),CLASS_TYPE); //target
 
 		gen.mark(callLabel); //target
-		objx.emitVar(gen, v);
+    if(false //directLinkExpr != null
+        )
+			{
     // TODO direct link
+			}
+    else
+			{
+		objx.emitVar(gen, v);
 		gen.invokeVirtual(VAR_TYPE, Method.getMethod("Object getRawRoot()")); //target, proto-fn
 		gen.swap();
 		emitArgsAndCall(1, context,objx,gen);
+			}
 		gen.goTo(endLabel);
 
 		gen.mark(onLabel); //target
@@ -3827,12 +3836,13 @@ static class InvokeExpr implements Expr{
 				}
 			}
 
+    Expr directLinkExpr = null;
 		if(RT.booleanCast(getCompilerOption(directLinkingKey))
            && fexpr instanceof VarExpr
            && context != C.EVAL)
 			{
 			Var v = ((VarExpr)fexpr).var;
-            if(!v.isDynamic() && !RT.booleanCast(RT.get(v.meta(), redefKey, false)) && (Var)RT.get(v.meta(), protocolKey) == null)
+            if(!v.isDynamic() && !RT.booleanCast(RT.get(v.meta(), redefKey, false)))
                 {
                 Symbol formtag = tagOf(form);
                 Object arglists = RT.get(RT.meta(v), arglistsKey);
@@ -3841,10 +3851,15 @@ static class InvokeExpr implements Expr{
                 Object vtag = RT.get(RT.meta(v), RT.TAG_KEY);
                 Expr ret = StaticInvokeExpr
                         .parse(v, RT.next(form), formtag != null ? formtag : sigtag != null ? sigtag : vtag, tailPosition);
-                if(ret != null)
+                if(ret != null && (Var)RT.get(v.meta(), protocolKey) == null)
                     {
 //				    System.out.println("invoke direct: " + v);
                     return ret;
+                    }
+                if(ret != null)
+                    {
+//				    System.out.println("invoke protocol direct: " + v);
+                    directLinkExpr = ret;
                     }
 //                System.out.println("NOT direct: " + v);
                 }

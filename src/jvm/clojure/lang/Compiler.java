@@ -3750,9 +3750,7 @@ static class InvokeExpr implements Expr{
 		gen.putStatic(objx.objtype, objx.cachedClassName(siteIndex),CLASS_TYPE); //target
 
 		gen.mark(callLabel); //target
-			if(false //FIXME
-          //directLinkExpr != null
-          )
+			if(directLinkExpr != null)
 			{
 		System.out.println("protocol direct: " + v);
 		emitArgs(1, context,objx,gen); //target, args...
@@ -4250,19 +4248,18 @@ static public class ObjExpr implements Expr{
 	}
 
   public final boolean closesDirectLinkable() {
-    return closes.count() == 0;
-    //if(closes.count() == 0) {
-    //  return true;
-    //} else {
-    //  for(ISeq s = RT.keys(closes); s != null; s = s.next()) {
-    //    LocalBinding lb = (LocalBinding) s.first();
-    //    Expr init = lb.init;
-    //    if (init == null || !(init instanceof ObjExpr) || !((ObjExpr)init).canBeDirect) {
-    //      return false;
-    //    }
-    //  }
-    //  return true;
-    //}
+    if(closes.count() == 0) {
+      return true;
+    } else {
+      for(ISeq s = RT.keys(closes); s != null; s = s.next()) {
+        LocalBinding lb = (LocalBinding) s.first();
+        Expr init = lb.init;
+        if (init == null || !(init instanceof ObjExpr) || !((ObjExpr)init).canBeDirect) {
+          return false;
+        }
+      }
+      return true;
+    }
   }
 
 	public final IPersistentMap keywords(){

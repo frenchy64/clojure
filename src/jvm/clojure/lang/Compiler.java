@@ -3750,17 +3750,15 @@ static class InvokeExpr implements Expr{
 		gen.putStatic(objx.objtype, objx.cachedClassName(siteIndex),CLASS_TYPE); //target
 
 		gen.mark(callLabel); //target
-    if(directLinkExpr != null)
+		if(directLinkExpr != null)
 			{
-    // TODO direct link
-    //FIXME I have no idea what I'm doing
-        System.out.println("protocol direct: " + v);
-			emitArgs(1, context,objx,gen); //target, args...
-      gen.invokeStatic(directLinkExpr.target, new Method("invokeStatic", directLinkExpr.getReturnType(), directLinkExpr.paramtypes)); //return
+		System.out.println("protocol direct: " + v);
+		emitArgs(1, context,objx,gen); //target, args...
+		gen.invokeStatic(directLinkExpr.target, new Method("invokeStatic", directLinkExpr.getReturnType(), directLinkExpr.paramtypes)); //return
 			}
-    else
+		else
 			{
-        System.out.println("protocol NOT direct: " + v);
+		System.out.println("protocol NOT direct: " + v);
 		objx.emitVar(gen, v);
 		gen.invokeVirtual(VAR_TYPE, Method.getMethod("Object getRawRoot()")); //target, proto-fn
 		gen.swap();
@@ -3809,9 +3807,8 @@ static class InvokeExpr implements Expr{
 			}
 	}
 
-
 	void emitArgsAndCall(int firstArgToEmit, C context, ObjExpr objx, GeneratorAdapter gen){
-    emitArgs(firstArgToEmit, context, objx, gen);
+		emitArgs(firstArgToEmit, context, objx, gen);
 
 		gen.invokeInterface(IFN_TYPE, new Method("invoke", OBJECT_TYPE, ARG_TYPES[Math.min(MAX_POSITIONAL_ARITY + 1,
 		                                                                                   args.count())]));
@@ -3845,7 +3842,7 @@ static class InvokeExpr implements Expr{
 				}
 			}
 
-    StaticInvokeExpr directLinkExpr = null;
+		StaticInvokeExpr directLinkExpr = null;
 		if(RT.booleanCast(getCompilerOption(directLinkingKey))
            && fexpr instanceof VarExpr
            && context != C.EVAL)
@@ -3864,13 +3861,13 @@ static class InvokeExpr implements Expr{
                     {
                     if((Var)RT.get(v.meta(), protocolKey) == null)
                       {
-				    System.out.println("invoke direct: " + v);
+				            System.out.println("invoke direct: " + v);
                     return ret;
                       }
                     else
                       {
-				    System.out.println("invoke protocol direct: " + v);
-                      directLinkExpr = (StaticInvokeExpr)ret;
+				            System.out.println("invoke protocol direct: " + v);
+                    directLinkExpr = (StaticInvokeExpr)ret;
                       }
                     }
                 else

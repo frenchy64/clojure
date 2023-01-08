@@ -5839,7 +5839,7 @@ abstract public static class ObjMethod{
   }
 
   final boolean usesThis() {
-    return thisUsages == 0;
+    return thisUsages != 0;
   }
 
 	public final IPersistentMap locals(){

@@ -3750,13 +3750,13 @@ static class InvokeExpr implements Expr{
 		gen.putStatic(objx.objtype, objx.cachedClassName(siteIndex),CLASS_TYPE); //target
 
 		gen.mark(callLabel); //target
-		if(directLinkExpr != null)
+			if(directLinkExpr != null)
 			{
 		System.out.println("protocol direct: " + v);
 		emitArgs(1, context,objx,gen); //target, args...
 		gen.invokeStatic(directLinkExpr.target, new Method("invokeStatic", directLinkExpr.getReturnType(), directLinkExpr.paramtypes)); //return
 			}
-		else
+			else
 			{
 		System.out.println("protocol NOT direct: " + v);
 		objx.emitVar(gen, v);

@@ -3861,18 +3861,18 @@ static class InvokeExpr implements Expr{
                     {
                     if((Var)RT.get(v.meta(), protocolKey) == null)
                       {
-				            System.out.println("invoke direct: " + v);
+//				    System.out.println("invoke direct: " + v);
                     return ret;
                       }
                     else
                       {
-				            System.out.println("invoke protocol direct: " + v);
+//				    System.out.println("invoke protocol direct: " + v);
                     directLinkExpr = (StaticInvokeExpr)ret;
                       }
                     }
                 else
                   {
-                System.out.println("NOT direct: " + v);
+//                System.out.println("NOT direct: " + v);
                   }
                 }
 			}

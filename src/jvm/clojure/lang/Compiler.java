@@ -3613,7 +3613,7 @@ static class InvokeExpr implements Expr{
 	public final int line;
 	public final int column;
 	public final boolean tailPosition;
-  public final Expr directLinkExpr;
+  public final StaticInvokeExpr directLinkExpr;
 	public final String source;
 	public boolean isProtocol = false;
 	public boolean isDirect = false;
@@ -3754,7 +3754,8 @@ static class InvokeExpr implements Expr{
 			{
     // TODO direct link
     //FIXME I have no idea what I'm doing
-      directLinkExpr.emit(context, objx, gen);
+			emitArgs(1, context,objx,gen); //target, args...
+      gen.invokeStatic(directLinkExpr.target, new Method("invokeStatic", directLinkExpr.getReturnType(), directLinkExpr.paramtypes)); //return
 			}
     else
 			{
@@ -3782,7 +3783,7 @@ static class InvokeExpr implements Expr{
 		gen.mark(endLabel);
 	}
 
-	void emitArgsAndCall(int firstArgToEmit, C context, ObjExpr objx, GeneratorAdapter gen){
+	void emitArgs(int firstArgToEmit, C context, ObjExpr objx, GeneratorAdapter gen){
 		for(int i = firstArgToEmit; i < Math.min(MAX_POSITIONAL_ARITY, args.count()); i++)
 			{
 			Expr e = (Expr) args.nth(i);
@@ -3804,6 +3805,11 @@ static class InvokeExpr implements Expr{
 			ObjMethod method = (ObjMethod) METHOD.deref();
 			method.emitClearThis(gen);
 			}
+	}
+
+
+	void emitArgsAndCall(int firstArgToEmit, C context, ObjExpr objx, GeneratorAdapter gen){
+    emitArgs(firstArgToEmit, context, objx, gen);
 
 		gen.invokeInterface(IFN_TYPE, new Method("invoke", OBJECT_TYPE, ARG_TYPES[Math.min(MAX_POSITIONAL_ARITY + 1,
 		                                                                                   args.count())]));
@@ -3852,17 +3858,23 @@ static class InvokeExpr implements Expr{
                 Object vtag = RT.get(RT.meta(v), RT.TAG_KEY);
                 Expr ret = StaticInvokeExpr
                         .parse(v, RT.next(form), formtag != null ? formtag : sigtag != null ? sigtag : vtag, tailPosition);
-                if(ret != null && (Var)RT.get(v.meta(), protocolKey) == null)
-                    {
-//				    System.out.println("invoke direct: " + v);
-                    return ret;
-                    }
                 if(ret != null)
                     {
+                    if((Var)RT.get(v.meta(), protocolKey) == null)
+                      {
+//				    System.out.println("invoke direct: " + v);
+                    return ret;
+                      }
+                    else
+                      {
 //				    System.out.println("invoke protocol direct: " + v);
-                    directLinkExpr = (StaticInvokeExpr)ret;
+                      directLinkExpr = (StaticInvokeExpr)ret;
+                      }
                     }
+                else
+                  {
 //                System.out.println("NOT direct: " + v);
+                  }
                 }
 			}
 

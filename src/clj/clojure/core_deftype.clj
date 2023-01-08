@@ -574,7 +574,8 @@
   (boolean (find-protocol-impl protocol x)))
 
 (defn -cache-protocol-fn [^clojure.lang.AFunction pf x ^Class c ^clojure.lang.IFn interf]
-  (let [cache  (.__methodImplCache pf)
+  (let [vol (when (volatile? pf) pf)
+        cache  (if vol @vol (.__methodImplCache pf))
         f (if (.isInstance c x)
             interf
             (find-protocol-method (.protocol cache) (.methodk cache) x))]
@@ -582,13 +583,16 @@
             (throw (IllegalArgumentException. (str "No implementation of method: " (.methodk cache) 
                                                    " of protocol: " (:var (.protocol cache)) 
                                              " found for class: " (if (nil? x) "nil" (.getName (class x)))))))
-    (set! (.__methodImplCache pf) (expand-method-impl-cache cache (class x) f))
+    (let [ecache (expand-method-impl-cache cache (class x) f)]
+      (if vol
+        (vreset! vol ecache)
+        (set! (.__methodImplCache pf) ecache)))
     f))
 
 (defn- emit-method-builder [on-interface method on-method arglists extend-via-meta]
   (let [methodk (keyword method)
-        gthis (with-meta (gensym) {:tag 'clojure.lang.AFunction})
-        ginterf (gensym)]
+        gthis (with-meta (gensym (str method "_this__")) {:tag 'clojure.lang.AFunction})
+        ginterf (gensym (str method "_interf__"))]
     `
        (let [~ginterf
              (fn
@@ -607,7 +611,8 @@
                           target (first gargs)]
                       (if extend-via-meta
                         `([~@gargs]
-                            (let [cache# (.__methodImplCache ~gthis)
+                            (let [vol# (.__methodImplCacheVolatile ~gthis)
+                                  cache# @vol#
                                   f# (.fnFor cache# (clojure.lang.Util/classOf ~target))]
                               (if (identical? f# ~ginterf)
                                 (f# ~@gargs)
@@ -615,16 +620,17 @@
                                   (meta# ~@gargs)
                                   (if f#
                                     (f# ~@gargs)
-                                    ((-cache-protocol-fn ~gthis ~target ~on-interface ~ginterf) ~@gargs))))))
+                                    ((-cache-protocol-fn vol# ~target ~on-interface ~ginterf) ~@gargs))))))
                         `([~@gargs]
-                            (let [cache# (.__methodImplCache ~gthis)
+                            (let [vol# (.__methodImplCacheVolatile ~gthis)
+                                  cache# @vol#
                                   f# (.fnFor cache# (clojure.lang.Util/classOf ~target))]
                               (if f#
                                 (f# ~@gargs)
-                                ((-cache-protocol-fn ~gthis ~target ~on-interface ~ginterf) ~@gargs)))))))
+                                ((-cache-protocol-fn vol# ~target ~on-interface ~ginterf) ~@gargs)))))))
                   arglists))]
         (fn [cache#]
-         (set! (.__methodImplCache f#) cache#)
+         (vreset! (.__methodImplCacheVolatile f#) cache#)
          f#))))
 
 (defn -reset-methods [protocol]

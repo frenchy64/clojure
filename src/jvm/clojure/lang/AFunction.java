@@ -20,6 +20,7 @@ public abstract class AFunction extends AFn implements IObj, Comparator, Fn, Ser
 private static final long serialVersionUID = 4469383498184457675L;
 
 public volatile MethodImplCache __methodImplCache;
+public volatile Volatile __methodImplCacheVolatile = new Volatile(null);
 
 public IPersistentMap meta(){
 	return null;

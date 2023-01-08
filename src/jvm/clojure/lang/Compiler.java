@@ -1139,6 +1139,14 @@ static class InstanceFieldExpr extends FieldExpr implements AssignableExpr{
 		this.column = column;
 		this.tag = tag;
 		this.requireField = requireField;
+    // don't treat __methodImplCache lookups on this as a usage of this
+    if(field != null && field.getDeclaringClass() == AFunction.class && target instanceof LocalBindingExpr)
+    {
+      LocalBinding b = ((LocalBindingExpr)target).b;
+      ObjMethod method = (ObjMethod) METHOD.deref();
+      if(b.idx == 0)
+        method.decThisUsage();
+    }
 		if(field == null && RT.booleanCast(RT.WARN_ON_REFLECTION.deref()))
 			{
 			if(targetClass == null)
@@ -4078,6 +4086,8 @@ static public class FnExpr extends ObjExpr{
 				}
 
 			fn.canBeDirect = !fn.hasEnclosingMethod && fn.closesDirectLinkable() && !usesThis;
+			System.err.println(fn.name+" canBeDirect: fn.hasEnclosingMethod="+fn.hasEnclosingMethod+" fn.closesDirectLinkable()="+fn.closesDirectLinkable()
+          +" usesThis="+usesThis);
 
 			IPersistentCollection methods = null;
 			for(int i = 0; i < methodArray.length; i++)

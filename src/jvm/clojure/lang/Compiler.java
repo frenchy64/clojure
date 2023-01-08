@@ -1139,6 +1139,14 @@ static class InstanceFieldExpr extends FieldExpr implements AssignableExpr{
 		this.column = column;
 		this.tag = tag;
 		this.requireField = requireField;
+    // don't treat __methodImplCache lookups on this as a usage of this
+    if(field != null && field.getDeclaringClass() == AFunction.class && target instanceof LocalBindingExpr)
+    {
+      LocalBinding b = ((LocalBindingExpr)target).b;
+      ObjMethod method = (ObjMethod) METHOD.deref();
+      if(b.idx == 0)
+        method.decThisUsage();
+    }
 		if(field == null && RT.booleanCast(RT.WARN_ON_REFLECTION.deref()))
 			{
 			if(targetClass == null)
@@ -3613,6 +3621,7 @@ static class InvokeExpr implements Expr{
 	public final int line;
 	public final int column;
 	public final boolean tailPosition;
+	public final StaticInvokeExpr directLinkExpr;
 	public final String source;
 	public boolean isProtocol = false;
 	public boolean isDirect = false;
@@ -3636,13 +3645,14 @@ static class InvokeExpr implements Expr{
         return null;
         }
 
-	public InvokeExpr(String source, int line, int column, Symbol tag, Expr fexpr, IPersistentVector args, boolean tailPosition) {
+	public InvokeExpr(String source, int line, int column, Symbol tag, Expr fexpr, IPersistentVector args, boolean tailPosition, StaticInvokeExpr directLinkExpr) {
 		this.source = source;
 		this.fexpr = fexpr;
 		this.args = args;
 		this.line = line;
 		this.column = column;
 		this.tailPosition = tailPosition;
+		this.directLinkExpr = directLinkExpr;
 
 		if(fexpr instanceof VarExpr)
 			{
@@ -3748,10 +3758,20 @@ static class InvokeExpr implements Expr{
 		gen.putStatic(objx.objtype, objx.cachedClassName(siteIndex),CLASS_TYPE); //target
 
 		gen.mark(callLabel); //target
+			if(directLinkExpr != null)
+			{
+		System.out.println("protocol direct: " + v);
+		emitArgs(1, context,objx,gen); //target, args...
+		gen.invokeStatic(directLinkExpr.target, new Method("invokeStatic", directLinkExpr.getReturnType(), directLinkExpr.paramtypes)); //return
+			}
+			else
+			{
+		System.out.println("protocol NOT direct: " + v);
 		objx.emitVar(gen, v);
 		gen.invokeVirtual(VAR_TYPE, Method.getMethod("Object getRawRoot()")); //target, proto-fn
 		gen.swap();
 		emitArgsAndCall(1, context,objx,gen);
+			}
 		gen.goTo(endLabel);
 
 		gen.mark(onLabel); //target
@@ -3771,7 +3791,7 @@ static class InvokeExpr implements Expr{
 		gen.mark(endLabel);
 	}
 
-	void emitArgsAndCall(int firstArgToEmit, C context, ObjExpr objx, GeneratorAdapter gen){
+	void emitArgs(int firstArgToEmit, C context, ObjExpr objx, GeneratorAdapter gen){
 		for(int i = firstArgToEmit; i < Math.min(MAX_POSITIONAL_ARITY, args.count()); i++)
 			{
 			Expr e = (Expr) args.nth(i);
@@ -3793,6 +3813,10 @@ static class InvokeExpr implements Expr{
 			ObjMethod method = (ObjMethod) METHOD.deref();
 			method.emitClearThis(gen);
 			}
+	}
+
+	void emitArgsAndCall(int firstArgToEmit, C context, ObjExpr objx, GeneratorAdapter gen){
+		emitArgs(firstArgToEmit, context, objx, gen);
 
 		gen.invokeInterface(IFN_TYPE, new Method("invoke", OBJECT_TYPE, ARG_TYPES[Math.min(MAX_POSITIONAL_ARITY + 1,
 		                                                                                   args.count())]));
@@ -3826,6 +3850,7 @@ static class InvokeExpr implements Expr{
 				}
 			}
 
+		StaticInvokeExpr directLinkExpr = null;
 		if(RT.booleanCast(getCompilerOption(directLinkingKey))
            && fexpr instanceof VarExpr
            && context != C.EVAL)
@@ -3842,10 +3867,21 @@ static class InvokeExpr implements Expr{
                         .parse(v, RT.next(form), formtag != null ? formtag : sigtag != null ? sigtag : vtag, tailPosition);
                 if(ret != null)
                     {
+                    if((Var)RT.get(v.meta(), protocolKey) == null)
+                      {
 //				    System.out.println("invoke direct: " + v);
                     return ret;
+                      }
+                    else
+                      {
+//				    System.out.println("invoke protocol direct: " + v);
+                    directLinkExpr = (StaticInvokeExpr)ret;
+                      }
                     }
+                else
+                  {
 //                System.out.println("NOT direct: " + v);
+                  }
                 }
 			}
 
@@ -3886,7 +3922,7 @@ static class InvokeExpr implements Expr{
 //			throw new IllegalArgumentException(
 //					String.format("No more than %d args supported", MAX_POSITIONAL_ARITY));
 
-		return new InvokeExpr((String) SOURCE.deref(), lineDeref(), columnDeref(), tagOf(form), fexpr, args, tailPosition);
+		return new InvokeExpr((String) SOURCE.deref(), lineDeref(), columnDeref(), tagOf(form), fexpr, args, tailPosition, directLinkExpr);
 	}
 }
 
@@ -4022,7 +4058,7 @@ static public class FnExpr extends ObjExpr{
 			for(ISeq s = RT.next(form); s != null; s = RT.next(s))
 				{
 				FnMethod f = FnMethod.parse(fn, (ISeq) RT.first(s), rettag);
-				if(f.usesThis)
+				if(f.usesThis())
 					{
 //					System.out.println(fn.name + " use this");
 					usesThis = true;
@@ -4049,7 +4085,9 @@ static public class FnExpr extends ObjExpr{
 								"Can't have fixed arity function with more params than variadic function");
 				}
 
-			fn.canBeDirect = !fn.hasEnclosingMethod && fn.closes.count() == 0 && !usesThis;
+			fn.canBeDirect = !fn.hasEnclosingMethod && fn.closesDirectLinkable() && !usesThis;
+			System.err.println(fn.name+" canBeDirect: fn.hasEnclosingMethod="+fn.hasEnclosingMethod+" fn.closesDirectLinkable()="+fn.closesDirectLinkable()
+          +" usesThis="+usesThis);
 
 			IPersistentCollection methods = null;
 			for(int i = 0; i < methodArray.length; i++)
@@ -4218,6 +4256,21 @@ static public class ObjExpr implements Expr{
 	public final IPersistentMap closes(){
 		return closes;
 	}
+
+  public final boolean closesDirectLinkable() {
+    if(closes.count() == 0) {
+      return true;
+    } else {
+      for(ISeq s = RT.keys(closes); s != null; s = s.next()) {
+        LocalBinding lb = (LocalBinding) s.first();
+        Expr init = lb.init;
+        if (init == null || !(init instanceof ObjExpr) || !((ObjExpr)init).canBeDirect) {
+          return false;
+        }
+      }
+      return true;
+    }
+  }
 
 	public final IPersistentMap keywords(){
 		return keywords;
@@ -5781,10 +5834,20 @@ abstract public static class ObjMethod{
 	int maxLocal = 0;
 	int line;
 	int column;
-	boolean usesThis = false;
+  int thisUsages = 0;
 	PersistentHashSet localsUsedInCatchFinally = PersistentHashSet.EMPTY;
 	protected IPersistentMap methodMeta;
 
+  final void incThisUsage() {
+    this.thisUsages++;
+  }
+  final void decThisUsage() {
+    this.thisUsages--;
+  }
+
+  final boolean usesThis() {
+    return thisUsages != 0;
+  }
 
 	public final IPersistentMap locals(){
 		return locals;
@@ -7530,7 +7593,7 @@ static void closeOver(LocalBinding b, ObjMethod method){
 			}
 		else {
             if(lb.idx == 0)
-                method.usesThis = true;
+                method.incThisUsage();
             if(IN_CATCH_FINALLY.deref() != null)
                 {
                 method.localsUsedInCatchFinally = (PersistentHashSet) method.localsUsedInCatchFinally.cons(b.idx);
@@ -7548,7 +7611,7 @@ static LocalBinding referenceLocal(Symbol sym) {
 		{
 		ObjMethod method = (ObjMethod) METHOD.deref();
 		if(b.idx == 0)
-			method.usesThis = true;
+			method.incThisUsage();
 		closeOver(b, method);
 		}
 	return b;

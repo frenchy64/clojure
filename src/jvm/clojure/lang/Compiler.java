@@ -3749,6 +3749,7 @@ static class InvokeExpr implements Expr{
 
 		gen.mark(callLabel); //target
 		objx.emitVar(gen, v);
+    // TODO direct link
 		gen.invokeVirtual(VAR_TYPE, Method.getMethod("Object getRawRoot()")); //target, proto-fn
 		gen.swap();
 		emitArgsAndCall(1, context,objx,gen);
@@ -3831,11 +3832,7 @@ static class InvokeExpr implements Expr{
            && context != C.EVAL)
 			{
 			Var v = ((VarExpr)fexpr).var;
-			Var pvar =  (Var)RT.get(v.meta(), protocolKey);
-      Object pon = pvar == null ? null : RT.get(pvar.get(), onKey);
-            if(!v.isDynamic() && !RT.booleanCast(RT.get(v.meta(), redefKey, false))
-                // prefer onMethod call over direct linking
-                && !(pvar != null && PROTOCOL_CALLSITES.isBound() && HostExpr.maybeClass(pon,false) != null))
+            if(!v.isDynamic() && !RT.booleanCast(RT.get(v.meta(), redefKey, false)) && (Var)RT.get(v.meta(), protocolKey) == null)
                 {
                 Symbol formtag = tagOf(form);
                 Object arglists = RT.get(RT.meta(v), arglistsKey);

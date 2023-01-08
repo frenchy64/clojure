@@ -3750,7 +3750,9 @@ static class InvokeExpr implements Expr{
 		gen.putStatic(objx.objtype, objx.cachedClassName(siteIndex),CLASS_TYPE); //target
 
 		gen.mark(callLabel); //target
-			if(directLinkExpr != null)
+			if(false //FIXME
+          //directLinkExpr != null
+          )
 			{
 		System.out.println("protocol direct: " + v);
 		emitArgs(1, context,objx,gen); //target, args...
@@ -4050,7 +4052,7 @@ static public class FnExpr extends ObjExpr{
 			for(ISeq s = RT.next(form); s != null; s = RT.next(s))
 				{
 				FnMethod f = FnMethod.parse(fn, (ISeq) RT.first(s), rettag);
-				if(f.usesThis)
+				if(f.usesThis())
 					{
 //					System.out.println(fn.name + " use this");
 					usesThis = true;
@@ -4077,7 +4079,7 @@ static public class FnExpr extends ObjExpr{
 								"Can't have fixed arity function with more params than variadic function");
 				}
 
-			fn.canBeDirect = !fn.hasEnclosingMethod && fn.closes.count() == 0 && !usesThis;
+			fn.canBeDirect = !fn.hasEnclosingMethod && fn.closesDirectLinkable() && !usesThis;
 
 			IPersistentCollection methods = null;
 			for(int i = 0; i < methodArray.length; i++)
@@ -4246,6 +4248,22 @@ static public class ObjExpr implements Expr{
 	public final IPersistentMap closes(){
 		return closes;
 	}
+
+  public final boolean closesDirectLinkable() {
+    return closes.count() == 0;
+    //if(closes.count() == 0) {
+    //  return true;
+    //} else {
+    //  for(ISeq s = RT.keys(closes); s != null; s = s.next()) {
+    //    LocalBinding lb = (LocalBinding) s.first();
+    //    Expr init = lb.init;
+    //    if (init == null || !(init instanceof ObjExpr) || !((ObjExpr)init).canBeDirect) {
+    //      return false;
+    //    }
+    //  }
+    //  return true;
+    //}
+  }
 
 	public final IPersistentMap keywords(){
 		return keywords;
@@ -5809,10 +5827,20 @@ abstract public static class ObjMethod{
 	int maxLocal = 0;
 	int line;
 	int column;
-	boolean usesThis = false;
+  int thisUsages = 0;
 	PersistentHashSet localsUsedInCatchFinally = PersistentHashSet.EMPTY;
 	protected IPersistentMap methodMeta;
 
+  final void incThisUsage() {
+    this.thisUsages++;
+  }
+  final void decThisUsage() {
+    this.thisUsages--;
+  }
+
+  final boolean usesThis() {
+    return thisUsages == 0;
+  }
 
 	public final IPersistentMap locals(){
 		return locals;
@@ -7558,7 +7586,7 @@ static void closeOver(LocalBinding b, ObjMethod method){
 			}
 		else {
             if(lb.idx == 0)
-                method.usesThis = true;
+                method.incThisUsage();
             if(IN_CATCH_FINALLY.deref() != null)
                 {
                 method.localsUsedInCatchFinally = (PersistentHashSet) method.localsUsedInCatchFinally.cons(b.idx);
@@ -7576,7 +7604,7 @@ static LocalBinding referenceLocal(Symbol sym) {
 		{
 		ObjMethod method = (ObjMethod) METHOD.deref();
 		if(b.idx == 0)
-			method.usesThis = true;
+			method.incThisUsage();
 		closeOver(b, method);
 		}
 	return b;

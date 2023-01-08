@@ -3562,7 +3562,7 @@ static class StaticInvokeExpr implements Expr, MaybePrimitiveExpr{
 		java.lang.reflect.Method method = null;
 		for(java.lang.reflect.Method m : allmethods)
 			{
-			System.out.println("StaticInvokeExpr parse: var="+v+" method="+m);
+			//System.out.println(m);
 			if(Modifier.isStatic(m.getModifiers()) && m.getName().equals("invokeStatic"))
 				{
 				Class[] params = m.getParameterTypes();
@@ -3842,10 +3842,10 @@ static class InvokeExpr implements Expr{
                         .parse(v, RT.next(form), formtag != null ? formtag : sigtag != null ? sigtag : vtag, tailPosition);
                 if(ret != null)
                     {
-				    System.out.println("invoke direct: " + v);
+//				    System.out.println("invoke direct: " + v);
                     return ret;
                     }
-                System.out.println("NOT direct: " + v);
+//                System.out.println("NOT direct: " + v);
                 }
 			}
 
@@ -4050,6 +4050,7 @@ static public class FnExpr extends ObjExpr{
 				}
 
 			fn.canBeDirect = !fn.hasEnclosingMethod && fn.closes.count() == 0 && !usesThis;
+			//System.err.println("canBeDirect " + fn.name + "has-enclosing-method="+ fn.hasEnclosingMethod + " closes-count="+fn.closes.count()+" usesThis="+usesThis);
 
 			IPersistentCollection methods = null;
 			for(int i = 0; i < methodArray.length; i++)

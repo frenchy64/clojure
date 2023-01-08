@@ -3637,7 +3637,7 @@ static class InvokeExpr implements Expr{
         return null;
         }
 
-	public InvokeExpr(String source, int line, int column, Symbol tag, Expr fexpr, IPersistentVector args, boolean tailPosition, Expr directLinkExpr) {
+	public InvokeExpr(String source, int line, int column, Symbol tag, Expr fexpr, IPersistentVector args, boolean tailPosition, StaticInvokeExpr directLinkExpr) {
 		this.source = source;
 		this.fexpr = fexpr;
 		this.args = args;
@@ -3750,10 +3750,11 @@ static class InvokeExpr implements Expr{
 		gen.putStatic(objx.objtype, objx.cachedClassName(siteIndex),CLASS_TYPE); //target
 
 		gen.mark(callLabel); //target
-    if(false //directLinkExpr != null
-        )
+    if(directLinkExpr != null)
 			{
     // TODO direct link
+    //FIXME I have no idea what I'm doing
+      directLinkExpr.emit(context, objx, gen);
 			}
     else
 			{
@@ -3836,7 +3837,7 @@ static class InvokeExpr implements Expr{
 				}
 			}
 
-    Expr directLinkExpr = null;
+    StaticInvokeExpr directLinkExpr = null;
 		if(RT.booleanCast(getCompilerOption(directLinkingKey))
            && fexpr instanceof VarExpr
            && context != C.EVAL)
@@ -3859,7 +3860,7 @@ static class InvokeExpr implements Expr{
                 if(ret != null)
                     {
 //				    System.out.println("invoke protocol direct: " + v);
-                    directLinkExpr = ret;
+                    directLinkExpr = (StaticInvokeExpr)ret;
                     }
 //                System.out.println("NOT direct: " + v);
                 }
@@ -3902,7 +3903,7 @@ static class InvokeExpr implements Expr{
 //			throw new IllegalArgumentException(
 //					String.format("No more than %d args supported", MAX_POSITIONAL_ARITY));
 
-		return new InvokeExpr((String) SOURCE.deref(), lineDeref(), columnDeref(), tagOf(form), fexpr, args, tailPosition);
+		return new InvokeExpr((String) SOURCE.deref(), lineDeref(), columnDeref(), tagOf(form), fexpr, args, tailPosition, directLinkExpr);
 	}
 }
 

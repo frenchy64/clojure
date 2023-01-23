@@ -399,8 +399,11 @@
 
 (defn sorted-map
   "keyval => key val
-  Returns a new sorted map with supplied mappings.  If any keys are
-  equal, they are handled as if by repeated uses of assoc."
+  Returns a new sorted map with supplied mappings, using compare
+  as the comparator.  If any keys are equal, they are handled as if
+  by repeated uses of assoc.  Note that operations like (assoc m k v),
+  (dissoc m k), and (get m k) require k to be comparable to all keys
+  in sorted map m via its comparator."
   {:added "1.0"
    :static true}
   ([& keyvals]
@@ -410,15 +413,19 @@
   "keyval => key val
   Returns a new sorted map with supplied mappings, using the supplied
   comparator.  If any keys are equal, they are handled as if by
-  repeated uses of assoc."
+  repeated uses of assoc.  Note that operations like (assoc m k v),
+  (dissoc m k), and (get m k) require k to be comparable to all keys
+  in sorted map m via its comparator."
   {:added "1.0"
    :static true}
   ([comparator & keyvals]
    (clojure.lang.PersistentTreeMap/create comparator keyvals)))
 
 (defn sorted-set
-  "Returns a new sorted set with supplied keys.  Any equal keys are
-  handled as if by repeated uses of conj."
+  "Returns a new sorted set with supplied keys, using compare as the
+  comparator.  Any equal keys are handled as if by repeated uses of conj.
+  Note that operations like (conj s k), (disj s k), and (get s k) require
+  k to be comparable to all keys in sorted set s via its comparator."
   {:added "1.0"
    :static true}
   ([& keys]
@@ -427,7 +434,8 @@
 (defn sorted-set-by
   "Returns a new sorted set with supplied keys, using the supplied
   comparator.  Any equal keys are handled as if by repeated uses of
-  conj."
+  conj.  Note that operations like (conj s k), (disj s k), and (get s k)
+  require k to be comparable to all keys in sorted set s via its comparator."
   {:added "1.1"
    :static true} 
   ([comparator & keys]

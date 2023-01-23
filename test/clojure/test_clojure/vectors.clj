@@ -9,7 +9,9 @@
 ; Author: Stuart Halloway, Daniel Solano Gómez
 
 (ns clojure.test-clojure.vectors
-  (:use clojure.test))
+  (:use clojure.test)
+  (:require [clojure.template :refer [do-template]])
+  (:import java.util.regex.Pattern))
 
 (deftest test-reversed-vec
   (let [r (range 6)
@@ -428,3 +430,26 @@
   (is (= [0 1 2] (new java.util.ArrayList [0 1 2])))
   (is (not= [1 2] (take 1 (cycle [1 2]))))
   (is (= [1 2 3 nil 4 5 6 nil] (eduction cat [[1 2 3 nil] [4 5 6 nil]]))))
+
+(defn re-literal [s]
+  (Pattern/compile s Pattern/LITERAL))
+
+(deftest test-vector-error-messages
+  (do-template [?e ?msg] (is (thrown-with-msg? IllegalArgumentException
+                                               (re-literal ?msg)
+                                               ?e))
+               ;; vector
+               ([] nil) "Must invoke clojure.lang.PersistentVector with integer key, given nil."
+               ([] "str") "Must invoke clojure.lang.PersistentVector with integer key, given java.lang.String."
+               (assoc [] nil 0) "Must associate clojure.lang.PersistentVector with integer key, given nil."
+               (assoc [] "str" 0) "Must associate clojure.lang.PersistentVector with integer key, given java.lang.String."
+               ;; map entry
+               ((first {:a 1}) nil) "Must invoke clojure.lang.MapEntry with integer key, given nil."
+               ((first {:a 1}) "str") "Must invoke clojure.lang.MapEntry with integer key, given java.lang.String."
+               (assoc (first {:a 1}) nil 0) "Must associate clojure.lang.MapEntry with integer key, given nil."
+               (assoc (first {:a 1}) "str" 0) "Must associate clojure.lang.MapEntry with integer key, given java.lang.String."
+               ;; transient vector
+               ((transient []) nil) "Must invoke transient vector with integer key, given nil."
+               ((transient []) "str") "Must invoke transient vector with integer key, given java.lang.String."
+               (assoc! (transient []) nil 0) "Must associate transient vector with integer key, given nil."
+               (assoc! (transient []) "str" 0) "Must associate transient vector with integer key, given java.lang.String."))

@@ -297,7 +297,10 @@ public boolean addAll(int i, Collection c){
 public Object invoke(Object arg1) {
 	if(Util.isInteger(arg1))
 		return nth(((Number) arg1).intValue());
-	throw new IllegalArgumentException("Key must be integer");
+	throw new IllegalArgumentException("Must invoke " + this.getClass().getName()
+	                                   + " with integer key, given "
+	                                   + (arg1 == null ? "nil" : arg1.getClass().getName())
+	                                   + ".");
 }
 
 public Iterator iterator(){
@@ -350,7 +353,10 @@ public IPersistentVector assoc(Object key, Object val){
 		int i = ((Number) key).intValue();
 		return assocN(i, val);
 		}
-	throw new IllegalArgumentException("Key must be integer");
+	throw new IllegalArgumentException("Must associate " + this.getClass().getName()
+	                                   + " with integer key, given "
+	                                   + (key == null ? "nil" : key.getClass().getName())
+	                                   + ".");
 }
 
 public Object valAt(Object key, Object notFound){

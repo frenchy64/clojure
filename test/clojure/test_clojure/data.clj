@@ -30,3 +30,8 @@
        [{:a {:c [1]}} {:a {:c [0]}} {:a {:c [nil 2] :b 1}}] {:a {:b 1 :c [1 2]}} {:a {:b 1 :c [0 2]}}
        [{:a nil} {:a false} {:b nil :c false}] {:a nil :b nil :c false} {:a false :b nil :c false}))
 
+;; CLJ-2705
+(deftest distinct-map-keys-test
+  (is (= '(1 3 7 5)
+         (#'clojure.data/distinct-map-keys (sorted-map 1 2 3 4 7 8)
+                                           (sorted-map 1 2 3 4 5 6)))))

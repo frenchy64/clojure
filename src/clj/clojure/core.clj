@@ -2598,6 +2598,7 @@
   ((juxt a b c) x) => [(a x) (b x) (c x)]"
   {:added "1.1"
    :static true}
+  ([] (constantly []))
   ([f] 
      (fn
        ([] [(f)])

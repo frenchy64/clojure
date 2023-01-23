@@ -46,6 +46,10 @@ static public class Unbound extends AFn{
 	public Object throwArity(int n){
 		throw new IllegalStateException("Attempting to call unbound fn: " + v);
 	}
+
+  public Class clojure_lang_AFn_onlyFixedArgs() {
+    return Unbound.class;
+  }
 }
 
 static class Frame{

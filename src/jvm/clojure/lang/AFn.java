@@ -14,6 +14,14 @@ package clojure.lang;
 
 public abstract class AFn implements IFn {
 
+// if your class Foo extends AFn and only implements fixed IFn/invoke arities,
+// return Foo.class. When passed more than 20 arguments via `apply`, instead
+// of walking the possibly infinite sequence of args, just throw an arity exception.
+// Returning null means "I don't know if this class implements rest args" and is the default.
+public Class clojure_lang_AFn_onlyFixedArgs() {
+  return null;
+}
+
 public Object call() {
 	return invoke();
 }
@@ -145,6 +153,10 @@ public Object applyTo(ISeq arglist) {
 }
 
 static public Object applyToHelper(IFn ifn, ISeq arglist) {
+  return applyToHelper(ifn, arglist, false, null);
+}
+
+static public Object applyToHelper(IFn ifn, ISeq arglist, final boolean knownNoRest, final String arityExceptionName) {
 	switch(RT.boundedLength(arglist, 20))
 		{
 		case 0:
@@ -400,6 +412,18 @@ static public Object applyToHelper(IFn ifn, ISeq arglist) {
 					, Util.ret1((arglist = arglist.next()).first(),arglist = null)
 			);
 		default:
+      if (ifn instanceof AFn) {
+        final AFn afn = (AFn)ifn;
+        if (afn instanceof AFunction || //assume that AFunction never has rest args
+            afn.getClass() == afn.clojure_lang_AFn_onlyFixedArgs()) {
+          afn.throwArity(21, true);
+        }
+      } else if (knownNoRest) {
+        throw new ArityException(21,
+                                 (arityExceptionName!=null ? arityExceptionName : ifn.getClass().toString()),
+                                 null,
+                                 true);
+      }
 			return ifn.invoke(arglist.first()
 					, (arglist = arglist.next()).first()
 					, (arglist = arglist.next()).first()
@@ -425,7 +449,10 @@ static public Object applyToHelper(IFn ifn, ISeq arglist) {
 }
 
 public Object throwArity(int n){
+  return throwArity(n, false);
+}
+public Object throwArity(int n, boolean nIsMinimum){
 	String name = getClass().getName();
-	throw new ArityException(n, name);
+	throw new ArityException(n, name, null, nIsMinimum);
 }
 }

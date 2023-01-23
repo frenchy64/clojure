@@ -135,6 +135,10 @@ public Object invoke(Object obj, Object notFound) {
 	return RT.get(obj, this, notFound);
 }
 
+public Class clojure_lang_AFn_onlyFixedArgs() {
+  return Symbol.class;
+}
+
 public IPersistentMap meta(){
 	return _meta;
 }

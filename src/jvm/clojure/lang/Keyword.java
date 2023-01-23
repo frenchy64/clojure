@@ -260,7 +260,7 @@ public Object invoke(Object arg1, Object arg2, Object arg3, Object arg4, Object 
 
 
 public Object applyTo(ISeq arglist) {
-	return AFn.applyToHelper(this, arglist);
+	return AFn.applyToHelper(this, arglist, true, toString());
 }
 
 

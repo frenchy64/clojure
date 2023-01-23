@@ -42,6 +42,10 @@ PersistentTreeSet(IPersistentMap meta, IPersistentMap impl){
 	this._meta = meta;
 }
 
+public Class clojure_lang_AFn_onlyFixedArgs() {
+  return PersistentTreeSet.class;
+}
+
 public boolean equals(Object obj){
     try {
         return super.equals(obj);

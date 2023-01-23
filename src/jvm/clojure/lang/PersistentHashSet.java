@@ -89,6 +89,10 @@ PersistentHashSet(IPersistentMap meta, IPersistentMap impl){
 	this._meta = meta;
 }
 
+public Class clojure_lang_AFn_onlyFixedArgs() {
+  return clojure.lang.PersistentHashSet.class;
+}
+
 public IPersistentSet disjoin(Object key) {
 	if(contains(key))
 		return new PersistentHashSet(meta(),impl.without(key));
@@ -127,6 +131,10 @@ static final class TransientHashSet extends ATransientSet {
 	public IPersistentCollection persistent() {
 		return new PersistentHashSet(null, impl.persistent());
 	}
+
+  public Class clojure_lang_AFn_onlyFixedArgs() {
+    return TransientHashSet.class;
+  }
 }
 
 }

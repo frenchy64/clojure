@@ -35,6 +35,10 @@ final boolean hasNull;
 final Object nullValue;
 final IPersistentMap _meta;
 
+public Class clojure_lang_AFn_onlyFixedArgs() {
+  return PersistentHashMap.class;
+}
+
 final public static PersistentHashMap EMPTY = new PersistentHashMap(0, null, false, null);
 final private static Object NOT_FOUND = new Object();
 
@@ -312,6 +316,10 @@ static final class TransientHashMap extends ATransientMap {
 		this.hasNull = hasNull;
 		this.nullValue = nullValue;
 	}
+
+  public Class clojure_lang_AFn_onlyFixedArgs() {
+    return TransientHashMap.class;
+  }
 
 	ITransientMap doAssoc(Object key, Object val) {
 		if (key == null) {

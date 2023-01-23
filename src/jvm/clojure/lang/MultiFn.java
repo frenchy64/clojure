@@ -576,6 +576,11 @@ public Object invoke(Object arg1, Object arg2, Object arg3, Object arg4, Object 
                                args);
 }
 
+public Object applyTo(ISeq arglist) {
+    return getFn(dispatchFn.applyTo(arglist)).
+      applyTo(arglist);
+}
+
     public IPersistentMap getMethodTable() {
         return methodTable;
     }

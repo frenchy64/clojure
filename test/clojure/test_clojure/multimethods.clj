@@ -269,3 +269,29 @@
     (is (fn? (get-method simple3 :b)))
     (is (= :b ((get-method simple3 :b) 1)))
     (is (nil? (get-method simple3 :c)))))
+
+(defmulti inf-args (constantly nil))
+(defmethod inf-args :default [& args] [:inf-args (take 10 args)])
+
+(defmulti disp-first (fn [target & _] (class target)))
+(defmethod disp-first Long [target & _] (inc target))
+(defmethod disp-first :default [target & args] [target (take 10 args)])
+
+(defmulti throws-on-inf1 (fn []))
+(defmulti throws-on-inf2 {} {})
+(defmulti throws-on-inf3 :a)
+
+(deftest inf-args-test
+  (is (= [:inf-args (range 10)]
+         (apply inf-args (range))))
+  (is (= 2 (apply disp-first 1 (range))))
+  (is (= [::foo (range 10)] (apply disp-first ::foo (range))))
+  (is (thrown-with-msg? clojure.lang.ArityException
+                        #"Wrong number of args \(21\+\) passed to:.*"
+                        (apply throws-on-inf1 (range))))
+  (is (thrown-with-msg? clojure.lang.ArityException
+                        #"Wrong number of args \(21\+\) passed to:.*"
+                        (apply throws-on-inf2 (range))))
+  (is (thrown-with-msg? clojure.lang.ArityException
+                        #"Wrong number of args \(21\+\) passed to: :a"
+                        (apply throws-on-inf3 (range)))))

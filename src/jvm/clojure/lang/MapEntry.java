@@ -28,6 +28,10 @@ public MapEntry(Object key, Object val){
 	this._val = val;
 }
 
+public Class clojure_lang_AFn_onlyFixedArgs() {
+  return MapEntry.class;
+}
+
 public Object key(){
 	return _key;
 }

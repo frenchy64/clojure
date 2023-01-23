@@ -390,7 +390,12 @@
         ns-part (namespace-munge *ns*)
         classname (symbol (str ns-part "." gname))
         hinted-fields fields
-        fields (vec (map #(with-meta % nil) fields))]
+        fields (vec (map #(with-meta % nil) fields))
+        fields-set (set fields)
+        map-ctor-arg-name (some (fn [arg-name]
+                                  (when-not (fields-set arg-name)
+                                    arg-name))
+                                (map #(symbol (str 'm %)) (cons nil (range))))]
     `(let []
        (declare ~(symbol (str  '-> gname)))
        (declare ~(symbol (str 'map-> gname)))
@@ -398,7 +403,11 @@
        (import ~classname)
        ~(build-positional-factory gname classname fields)
        (defn ~(symbol (str 'map-> gname))
-         ~(str "Factory function for class " classname ", taking a map of keywords to field values.")
+         ~(format "Factory function for class %s, taking a map %s of keywords to field values."
+                  classname map-ctor-arg-name)
+         {:arglists '~(list [(if (seq fields)
+                               {:keys fields :as map-ctor-arg-name}
+                               map-ctor-arg-name)])}
          ([m#] (~(symbol (str classname "/create"))
                 (if (instance? clojure.lang.MapEquivalence m#) m# (into {} m#)))))
        ~classname)))

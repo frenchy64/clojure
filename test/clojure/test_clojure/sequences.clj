@@ -14,7 +14,7 @@
             [clojure.test.check.generators :as gen]
             [clojure.test.check.properties :as prop]
             [clojure.test.check.clojure-test :refer (defspec)])
-  (:import clojure.lang.IReduce))
+  (:import [clojure.lang ExceptionInfo IReduce]))
 
 ;; *** Tests ***
 
@@ -143,6 +143,15 @@
       (lazy-seq "abc") '(\a \b \c)
       (lazy-seq (into-array [1 2])) '(1 2) ))
 
+(deftest test-lazy-seq-cache-exceptions
+  (let [cnt (atom 0)
+        c (lazy-seq (throw (ex-info "" {:cnt (swap! cnt inc)})))]
+    (dotimes [_ 5]
+      (try (dorun c)
+           (is false)
+           (catch ExceptionInfo e
+             (is (= 1 @cnt))
+             (is (= {:cnt 1} (ex-data e))))))))
 
 (deftest test-seq
   (is (not (seq? (seq []))))

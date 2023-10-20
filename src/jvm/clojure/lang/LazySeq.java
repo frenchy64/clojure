@@ -21,6 +21,7 @@ private static final long serialVersionUID = 7700080124382322592L;
 private IFn fn;
 private Object sv;
 private ISeq s;
+private Exception ex;
 
 public LazySeq(IFn fn){
 	this.fn = fn;
@@ -41,11 +42,17 @@ public Obj withMeta(IPersistentMap meta){
 final synchronized Object sval(){
 	if(fn != null)
 		{
+            try {
                 sv = fn.invoke();
-                fn = null;
+            } catch (Exception e) {
+                ex = e;
+            }
+            fn = null;
 		}
 	if(sv != null)
 		return sv;
+    if(ex != null)
+        throw Util.sneakyThrow(ex);
 	return s;
 }
 

@@ -103,6 +103,7 @@ static class Action implements Runnable{
 	}
 
 	static void doRun(Action action){
+		Object previousFrame = Var.getThreadBindingFrame();
 		try
 			{
 			nested.set(PersistentVector.EMPTY);
@@ -156,6 +157,7 @@ static class Action implements Runnable{
 		finally
 			{
 			nested.set(null);
+			Var.resetThreadBindingFrame(previousFrame); // clear conveyed bindings
 			}
 	}
 

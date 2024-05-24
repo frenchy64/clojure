@@ -5896,6 +5896,18 @@
      "True while a verbose load is pending"}
   *loading-verbosely* false)
 
+(defonce
+  ^{:private true :doc
+     "A atom containing a map from lib to lock"}
+  lib-locks (atom {}))
+
+(defn lib-lock
+  "Returns an object whose monitor will be held while lib is loading."
+  {:added "1.12"}
+  [lib]
+  (let [[{lock lib}] (swap-vals! lib-locks update lib #(or % (Object.)))]
+    lock))
+
 (defn- throw-if
   "Throws a CompilerException with a message if pred is true"
   [pred fmt & args]
@@ -5950,7 +5962,8 @@
   namespace exists after loading. If require, records the load so any
   duplicate loads can be skipped."
   [lib need-ns require]
-  (load (root-resource lib))
+  (locking (lib-lock lib)
+    (load (root-resource lib)))
   (throw-if (and need-ns (not (find-ns lib)))
             "namespace '%s' not found after loading '%s'"
             lib (root-resource lib))

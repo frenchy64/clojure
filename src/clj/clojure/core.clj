@@ -5898,7 +5898,7 @@
 
 (defonce
   ^{:private true :doc
-     "A atom containing a map from lib to lock"}
+     "An atom containing a map from lib to lock"}
   lib-locks (atom {}))
 
 (defn lib-lock

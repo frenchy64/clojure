@@ -5905,9 +5905,7 @@
   "Returns an object whose monitor will be held while lib is loading."
   {:added "1.12"}
   [lib]
-  (let [[{lock lib} :as all] (swap-vals! lib-locks #(assoc % lib (or (% lib) (Object.))))]
-    (assert lock all)
-    lock))
+  (get (swap! lib-locks #(assoc % lib (or (% lib) (Object.)))) lib))
 
 (defn- throw-if
   "Throws a CompilerException with a message if pred is true"

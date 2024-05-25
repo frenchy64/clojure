@@ -6026,10 +6026,7 @@
                                       as-alias (fn [lib _need _reloaded-libs] (create-ns lib))
                                       :else load-one))
         filter-opts (select-keys opts '(:exclude :only :rename :refer))
-        _ (prn "paths" (vec *pending-paths*))
-        _ (prn "lib" lib (ns-name *ns*) load (vec (keys @lib-loaders)))
         bf (bound-fn []
-             (prn "bf lib" lib (ns-name *ns*) (find-ns lib))
              (binding [*loading-verbosely* (or *loading-verbosely* verbose)]
                (if load
                  (let [undefined-on-entry (not (find-ns lib))]
@@ -6039,27 +6036,27 @@
                             (remove-ns lib))
                           (throw e))))
                  (throw-if (and need-ns (not (find-ns lib)))
-                           "namespace '%s' not found" lib))
-               (prn "after load" lib (ns-name *ns*) (find-ns lib))
-               (when (and need-ns *loading-verbosely*)
-                 (printf "(clojure.core/in-ns '%s)\n" (ns-name *ns*)))
-               (when as
-                 (when *loading-verbosely*
-                   (printf "(clojure.core/alias '%s '%s)\n" as lib))
-                 (alias as lib))
-               (when as-alias
-                 (when *loading-verbosely*
-                   (printf "(clojure.core/alias '%s '%s)\n" as-alias lib))
-                 (alias as-alias lib))
-               (when (or use (:refer filter-opts))
-                 (when *loading-verbosely*
-                   (printf "(clojure.core/refer '%s" lib)
-                   (doseq [opt filter-opts]
-                     (printf " %s '%s" (key opt) (print-str (val opt))))
-                   (printf ")\n"))
-                 (apply refer lib (mapcat seq filter-opts))))
-             {:lib lib :nsym (ns-name *ns*)})]
-    (offer-lib-loader lib (delay (bf)) reloaded-libs)))
+                           "namespace '%s' not found" lib)))
+             {:lib lib :nsym (ns-name *ns*)})
+        _ (offer-lib-loader lib (delay (bf)) reloaded-libs)]
+    (binding [*loading-verbosely* (or *loading-verbosely* verbose)]
+      (when (and need-ns *loading-verbosely*)
+        (printf "(clojure.core/in-ns '%s)\n" (ns-name *ns*)))
+      (when as
+        (when *loading-verbosely*
+          (printf "(clojure.core/alias '%s '%s)\n" as lib))
+        (alias as lib))
+      (when as-alias
+        (when *loading-verbosely*
+          (printf "(clojure.core/alias '%s '%s)\n" as-alias lib))
+        (alias as-alias lib))
+      (when (or use (:refer filter-opts))
+        (when *loading-verbosely*
+          (printf "(clojure.core/refer '%s" lib)
+          (doseq [opt filter-opts]
+            (printf " %s '%s" (key opt) (print-str (val opt))))
+          (printf ")\n"))
+        (apply refer lib (mapcat seq filter-opts))))))
 
 (defn- load-libs
   "Loads libs, interpreting libspecs, prefix lists, and flags for
@@ -6167,7 +6164,7 @@
   {:added "1.0"}
 
   [& args]
-  (apply load-libs args))
+  (apply load-libs :require args))
 
 (defn requiring-resolve
   "Resolves namespace-qualified sym per 'resolve'. If initial resolve
@@ -6190,7 +6187,7 @@ fails, attempts to require sym's namespace and retries."
   The arguments and semantics for :exclude, :only, and :rename are the same
   as those documented for clojure.core/refer."
   {:added "1.0"}
-  [& args] (apply load-libs :use args))
+  [& args] (apply load-libs :require :use args))
 
 (defn loaded-libs
   "Returns a sorted set of symbols naming the currently loaded libs"

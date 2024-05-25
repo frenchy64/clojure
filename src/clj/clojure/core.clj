@@ -6213,7 +6213,7 @@ fails, attempts to require sym's namespace and retries."
                   (if (successful-lib-loader? loader)
                     (conj s lib)
                     s))
-                (transient (sorted-set))
+                (transient @*loaded-libs*)
                 @lib-loaders)))
 
 (defn load

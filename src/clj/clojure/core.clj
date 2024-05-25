@@ -6251,6 +6251,7 @@ fails, attempts to require sym's namespace and retries."
   be in the classpath."
   {:added "1.0"}
   [lib]
+  (prn "compile" lib)
   (binding [*compile-files* true]
     (load-one lib true true))
   lib)

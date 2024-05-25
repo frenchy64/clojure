@@ -6167,23 +6167,15 @@
   [& args]
   (apply load-libs :require args))
 
-(defn- serialized-require
-  "Like 'require', but serializes loading.
-  Interim function preferred over 'require' for known asynchronous loads.
-  Future changes may make these equivalent."
-  {:added "1.10"}
-  [& args]
-  (apply require args))
-
 (defn requiring-resolve
   "Resolves namespace-qualified sym per 'resolve'. If initial resolve
 fails, attempts to require sym's namespace and retries."
   {:added "1.10"}
   [sym]
   (if (qualified-symbol? sym)
-    (let [nsym (-> sym namespace symbol)]
-      (if-some [loader (@lib-loaders sym)]
-        @loader
+    (let [nsym (-> sym namespace symbol)
+          loader (@lib-loaders nsym)]
+      (when-not (successful-lib-loader? loader)
         (require nsym))
       (resolve sym))
     (throw (IllegalArgumentException. (str "Not a qualified symbol: " sym)))))

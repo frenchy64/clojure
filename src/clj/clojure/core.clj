@@ -6031,6 +6031,8 @@
         reloaded-libs *reloaded-libs*
         loaded (or (contains? @*loaded-libs* lib)
                    (and (successful-lib-loader? (@lib-loaders lib))
+                        (not reload)
+                        (not reload-all)
                         (if reloaded-libs
                           (when-some [loader (@reloaded-libs lib)]
                             @loader

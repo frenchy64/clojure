@@ -5918,14 +5918,22 @@
 (defn- offer-lib-loader
   [lib offered reloaded-libs]
   (loop [loader (@lib-loaders lib)]
-    (prn "offer-lib-loader" lib loader (meta loader))
-    (or (try @loader
-             (prn "loader" @loader)
-             (or (not reloaded-libs)
-                 (@reloaded-libs lib))
-             (catch Throwable e
-               (when (identical? offered loader)
-                 (throw e))))
+    (or (let [offered? (identical? offered loader)]
+          (try (when loader
+                 (when-not (or offered? (realized? loader))
+                   (println (str lib " loading from " (ns-name *ns*)
+                                 " joining with existing load")))
+                 (let [from @loader]
+                   (when *loading-verbosely*
+                     (when-not offered?
+                       (println (str "Not loading " lib " in " (ns-name *ns*)
+                                     ", previously loaded successfully by "
+                                     (:nsym from)))))))
+               (or (not reloaded-libs)
+                   (@reloaded-libs lib))
+               (catch Throwable e
+                 (when offered?
+                   (throw e)))))
         (let [{loader lib} (swap! lib-loaders
                                   (fn [{loader' lib :as m}]
                                     (if (or (nil? loader')

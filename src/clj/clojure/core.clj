@@ -5912,6 +5912,7 @@
 
 (defn remove-lib
   "Remove lib's namespace and remove lib from the set of loaded libs."
+  {:added "1.12"}
   [lib]
   (let [[{loader lib}] (swap-vals! lib-loaders dissoc lib)]
     (successful-lib-loader? loader))
@@ -6039,23 +6040,26 @@
         load (cond reload-all load-all
                    reload load-one
                    (not loaded) (cond need-ns load-one
-                                      as-alias (fn [lib _need _reloaded-libs] (create-ns lib))
+                                      as-alias :as-alias
                                       :else load-one))
         filter-opts (select-keys opts '(:exclude :only :rename :refer))
-        bf (bound-fn []
-             (binding [*loading-verbosely* (or *loading-verbosely* verbose)]
-               (if load
-                 (let [undefined-on-entry (not (find-ns lib))]
-                   (try (load lib need-ns true)
-                        (catch Throwable e
-                          (when undefined-on-entry
-                            (remove-ns lib))
-                          (throw e))))
-                 (throw-if (and need-ns (not (find-ns lib)))
-                           "namespace '%s' not found" lib)))
-             {:lib lib :nsym (ns-name *ns*)})
-        _ (offer-lib-loader lib (delay (bf)) reloaded-libs)]
+        bf (when load
+             (if (= :as-alias load)
+               (do (create-ns lib) nil)
+               (bound-fn []
+                 (binding [*loading-verbosely* (or *loading-verbosely* verbose)]
+                   (let [undefined-on-entry (not (find-ns lib))]
+                     (try (load lib need-ns true)
+                          (catch Throwable e
+                            (when undefined-on-entry
+                              (remove-ns lib))
+                            (throw e)))))
+                 {:lib lib :nsym (ns-name *ns*)})))
+        _ (when bf
+            (offer-lib-loader lib (delay (bf)) reloaded-libs))]
     (binding [*loading-verbosely* (or *loading-verbosely* verbose)]
+      (throw-if (and need-ns (not (find-ns lib)))
+                "namespace '%s' not found" lib)
       (when (and need-ns *loading-verbosely*)
         (printf "(clojure.core/in-ns '%s)\n" (ns-name *ns*)))
       (when as

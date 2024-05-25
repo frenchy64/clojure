@@ -6003,8 +6003,7 @@
   namespace exists after loading. If require, records the load so any
   duplicate loads can be skipped."
   [lib need-ns require]
-  (binding [*loaded-libs* (ref (sorted-set))]
-    (load (root-resource lib)))
+  (load (root-resource lib))
   (throw-if (and need-ns (not (find-ns lib)))
             "namespace '%s' not found after loading '%s'"
             lib (root-resource lib)))
@@ -6233,7 +6232,8 @@ fails, attempts to require sym's namespace and retries."
         (flush))
       (check-cyclic-dependency path)
       (when-not (= path (first *pending-paths*))
-        (binding [*pending-paths* (conj *pending-paths* path)]
+        (binding [*pending-paths* (conj *pending-paths* path)
+                  *loaded-libs* (ref (sorted-set))]
           (clojure.lang.RT/load (.substring path 1)))))))
 
 (defn compile

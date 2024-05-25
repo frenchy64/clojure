@@ -6004,6 +6004,7 @@
   namespace exists after loading. If require, records the load so any
   duplicate loads can be skipped."
   [lib need-ns require]
+  (prn "load-one" lib)
   (load (root-resource lib))
   (throw-if (and need-ns (not (find-ns lib)))
             "namespace '%s' not found after loading '%s'"

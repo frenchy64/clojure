@@ -5860,7 +5860,9 @@
         ~@(when (and (not= name 'clojure.core) (not-any? #(= :refer-clojure (first %)) references))
             `((clojure.core/refer '~'clojure.core)))
         ~@(map process-reference references))
-        nil)))
+        (if (.equals '~name 'clojure.core) 
+          nil
+          (do (dosync (commute @#'*loaded-libs* conj '~name)) nil)))))
 
 (defmacro refer-clojure
   "Same as (refer 'clojure.core <filters>)"
@@ -6000,7 +6002,8 @@
   namespace exists after loading. If require, records the load so any
   duplicate loads can be skipped."
   [lib need-ns require]
-  (load (root-resource lib))
+  (binding [*loaded-libs* (ref (sorted-set))]
+    (load (root-resource lib)))
   (throw-if (and need-ns (not (find-ns lib)))
             "namespace '%s' not found after loading '%s'"
             lib (root-resource lib)))
@@ -6025,12 +6028,13 @@
         opts (apply hash-map options)
         {:keys [as reload reload-all use verbose as-alias]} opts
         reloaded-libs *reloaded-libs*
-        loaded (and (successful-lib-loader? (@lib-loaders lib))
-                    (if reloaded-libs
-                      (when-some [loader (@reloaded-libs lib)]
-                        @loader
-                        true)
-                      true))
+        loaded (or (contains? @*loaded-libs* lib)
+                   (and (successful-lib-loader? (@lib-loaders lib))
+                        (if reloaded-libs
+                          (when-some [loader (@reloaded-libs lib)]
+                            @loader
+                            true)
+                          true)))
         need-ns (or as use)
         load (cond reload-all load-all
                    reload load-one

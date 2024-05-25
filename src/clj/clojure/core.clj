@@ -5915,6 +5915,7 @@
   [lib]
   (let [[{loader lib}] (swap-vals! lib-loaders dissoc lib)]
     (successful-lib-loader? loader))
+  (dosync (alter @*loaded-libs* disj lib))
   (remove-ns lib))
 
 (defn- offer-lib-loader

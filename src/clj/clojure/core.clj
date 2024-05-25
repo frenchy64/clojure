@@ -5917,13 +5917,27 @@
 
 (defn- offer-lib-loader
   [lib offered reloaded-libs]
-  (loop [loader (@lib-loaders lib)]
-    (or (try @loader
-             (or (not reloaded-libs)
-                 (@reloaded-libs lib))
-             (catch Throwable e
-               (when (identical? offered loader)
-                 (throw e))))
+  (loop [^clojure.lang.IPending loader (@lib-loaders lib)]
+    (or (when loader
+          (let [offered? (identical? offered loader)]
+            (try (let [_ (when-not (or offered (.isRealized loader))
+                           (when *loading-verbosely*
+                             (println (str "Waiting for ongoing loading of " lib
+                                           " for " (ns-name *ns*)))))
+                       from @loader
+                       needs-reload? (or (not reloaded-libs)
+                                         (@reloaded-libs lib))
+                       _ (when-not offered
+                           (when *loading-verbosely*
+                             (println (str "Concurrent loading of " lib " finished successfully for "
+                                           (:nsym from) ", "
+                                           (if needs-reload?
+                                             (str "needs reload for " (ns-name *ns*))
+                                             (str "no futher loading needed for " (ns-name *ns*)))))))]
+                   needs-reload?)
+                 (catch Throwable e
+                   (when (identical? offered loader)
+                     (throw e))))))
         (let [{loader lib} (swap! lib-loaders
                                   (fn [{loader' lib :as m}]
                                     (if (or (nil? loader')

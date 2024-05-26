@@ -9,7 +9,8 @@
 ; Authors: Frantisek Sodomka, Stuart Halloway
 
 (ns clojure.test-clojure.ns-libs
-  (:use clojure.test))
+  (:use clojure.test)
+  (:require clojure.test-helper))
 
 ; http://clojure.org/namespaces
 
@@ -143,3 +144,43 @@
 
   ;; now loaded!
   (is (not (nil? (resolve 'alias-now/example)))))
+
+(def ^:dynamic *coord* nil)
+
+(deftest requiring-resolve-atomic-load-test
+  (remove-ns 'clojure.test-clojure.ns-libs-requiring-resolve-atomic)
+  (dosync (alter @#'clojure.core/*loaded-libs* disj 'clojure.test-clojure.ns-libs-requiring-resolve-atomic))
+  (let [start-right (promise)
+        right-started (promise)
+        finish-loading (promise)
+        right-load (atom false)
+        _ (is (not (find-ns 'clojure.test-clojure.ns-libs-requiring-resolve-atomic)))
+        _ (is (not (contains? @@#'clojure.core/*loaded-libs* 'clojure.test-clojure.ns-libs-requiring-resolve-atomic)))
+        left (future
+               (with-bindings {;#'*loading-verbosely* true
+                               #'*coord* (fn []
+                                           (deliver start-right true)
+                                           @finish-loading)}
+                 @(requiring-resolve 'clojure.test-clojure.ns-libs-requiring-resolve-atomic/a)))
+        right (future
+                @start-right
+                (with-bindings {;#'*loading-verbosely* true
+                                #'*coord* (fn [] (reset! right-load true))}
+                  (deliver right-started true)
+                  @(requiring-resolve 'clojure.test-clojure.ns-libs-requiring-resolve-atomic/a)))]
+    (try (is (= true (deref start-right 5000 ::blocked)))
+         (is (= true (deref right-started 5000 ::blocked)))
+         (is (= ::blocked (deref left 2000 ::blocked)))
+         (is (= ::blocked (deref right 2000 ::blocked)))
+         (is (= ::blocked (deref finish-loading 2000 ::blocked)))
+         (is (not @right-load))
+         (is (find-ns 'clojure.test-clojure.ns-libs-requiring-resolve-atomic))
+         (is (not (contains? @@#'clojure.core/*loaded-libs* 'clojure.test-clojure.ns-libs-requiring-resolve-atomic)))
+         (deliver finish-loading true)
+         (is (= 2 (deref left 1000 ::left-blocked)))
+         (is (= 2 (deref right 1000 ::right-blocked)))
+         (is (not @right-load))
+         (is (find-ns 'clojure.test-clojure.ns-libs-requiring-resolve-atomic))
+         (is (contains? @@#'clojure.core/*loaded-libs* 'clojure.test-clojure.ns-libs-requiring-resolve-atomic))
+         (finally
+           (run! #(deliver % true) [start-right right-started finish-loading])))))

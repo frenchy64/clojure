@@ -196,4 +196,6 @@
   (let [temp-ns (gensym)]
     (binding [*ns* *ns*]
       (eval (list `ns temp-ns))
-      (is (nil? (requiring-resolve (symbol (str temp-ns) "missing")))))))
+      (is (nil? (requiring-resolve (symbol (str temp-ns) "missing"))))
+      (eval (list 'def 'missing 1))
+      (is (= 1 @(requiring-resolve (symbol (str temp-ns) "missing")))))))

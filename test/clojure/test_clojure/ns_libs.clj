@@ -184,3 +184,16 @@
          (is (contains? @@#'clojure.core/*loaded-libs* 'clojure.test-clojure.ns-libs-requiring-resolve-atomic))
          (finally
            (run! #(deliver % true) [start-right right-started finish-loading])))))
+
+(deftest self-requiring-resolve-test
+  (remove-ns 'clojure.test-clojure.ns-libs-requiring-resolve-self)
+  (dosync (alter @#'clojure.core/*loaded-libs* disj 'clojure.test-clojure.ns-libs-requiring-resolve-self))
+  (is (nil? (resolve 'clojure.test-clojure.ns-libs-requiring-resolve-self/a)))
+  (require 'clojure.test-clojure.ns-libs-requiring-resolve-self)
+  (is (= 1 @(resolve 'clojure.test-clojure.ns-libs-requiring-resolve-self/a))))
+
+(deftest repl-requiring-resolve-test
+  (let [temp-ns (gensym)]
+    (binding [*ns* *ns*]
+      (eval (list `ns temp-ns))
+      (is (nil? (requiring-resolve (symbol (str temp-ns) "missing")))))))

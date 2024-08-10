@@ -125,11 +125,6 @@ Usage: *hello*
   "@@(ref (ref 1))"
 
   (with-pprint-dispatch code-dispatch
-    (write (read-string "~ @(ref 1)")
-	   :stream nil))
-  "~ @(ref 1)"
-
-  (with-pprint-dispatch code-dispatch
     (write (read-string "'foo")
 	   :stream nil))
   "'foo"
@@ -418,3 +413,9 @@ It is implemented with a number of custom enlive templates.\"
 
       "^{:a 1} #{1 4 3 2}\n"
       ^{:a 1} #{1 2 3 4})))
+
+(simple-tests quote-deref-pprint-reader-macro-test
+  (with-pprint-dispatch code-dispatch
+    (write (read-string "~ @(ref 1)")
+	   :stream nil))
+  "~ @(ref 1)")

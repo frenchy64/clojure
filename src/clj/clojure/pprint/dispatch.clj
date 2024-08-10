@@ -46,11 +46,19 @@
      {'quote "'", 'clojure.core/deref "@", 
       'var "#'", 'clojure.core/unquote "~"})
 
-(defn- pprint-reader-macro [alis]
-  (let [^String macro-char (reader-macros (first alis))]
-    (when (and macro-char (= 2 (count alis)))
+(defn- deref? [arg]
+  (and (seq? arg)
+       (= 2 (count arg))
+       (= 'clojure.core/deref (first arg))))
+
+(defn- pprint-reader-macro [[fst snd :as alis]]
+  (when (= 2 (count alis))
+    (when-some [^String macro-char (if (and (= 'clojure.core/unquote fst)
+                                            (deref? snd))
+                                     "~ "
+                                     (reader-macros fst))]
       (.write ^java.io.Writer *out* macro-char)
-      (write-out (second alis))
+      (write-out snd)
       true)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

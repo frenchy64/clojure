@@ -125,6 +125,11 @@ Usage: *hello*
   "@@(ref (ref 1))"
 
   (with-pprint-dispatch code-dispatch
+    (write (read-string "~ @(ref 1)")
+	   :stream nil))
+  "~ @(ref 1)"
+
+  (with-pprint-dispatch code-dispatch
     (write (read-string "'foo")
 	   :stream nil))
   "'foo"

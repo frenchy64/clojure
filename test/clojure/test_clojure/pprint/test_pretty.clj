@@ -210,7 +210,10 @@ It is implemented with a number of custom enlive templates.\"
         [autodoc.collect-info :only (contrib-info)]
         [autodoc.params :only (params expand-classpath)])
   (:use clojure.set clojure.java.io clojure.data clojure.java.browse
-        clojure.inspector clojure.zip clojure.stacktrace))")
+        clojure.inspector clojure.zip clojure.stacktrace))"
+  ;; CLJ-2708
+  "(ns)"
+  "(ns (ns))")
 
 (defn tst-pprint
   "A helper function to pprint to a string with a restricted right margin"
@@ -385,8 +388,9 @@ It is implemented with a number of custom enlive templates.\"
         "calendar object pretty prints")))
 
 (deftest test-print-meta
-  (let [r (with-meta (range 24) {:b 2})]
-    (are [expected val] (= (platform-newlines expected) (with-out-str (binding [*print-meta* true] (pprint val))))
+  (let [r (with-meta (range 24) {:b 2})
+        test-relative-line-number (-> '(1) meta :line)]
+    (are [?expected ?val] (= (platform-newlines ?expected) (with-out-str (binding [*print-meta* true] (pprint ?val))))
       "^{:a 1, :b 2} {:x 1, :y 2}\n"
       ^{:a 1 :b 2} {:x 1 :y 2}
 
@@ -405,7 +409,7 @@ It is implemented with a number of custom enlive templates.\"
       "^{:a 1}\n[[[1\n   ^{:b 2}\n   (0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23)]]]\n"
       ^{:a 1} [[[1 ^{:b 2} r]]]
 
-      "^{:line 409, :column 16} (1 2 3 4)\n"
+      (clojure.core/format "^{:line %s, :column 16} (1 2 3 4)\n" (+ test-relative-line-number 21))
       ^{:a 1} '(1 2 3 4)
 
       "^{:a 1} (0 1 2 3)\n"

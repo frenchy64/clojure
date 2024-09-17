@@ -53,3 +53,22 @@
     (is (fails-with-cause? clojure.lang.ExceptionInfo
           #"Call to clojure.core/fn did not conform to spec"
           (eval '(fn))))))
+
+; this case is unreachable via Compiler.java since only up to 20 fixed arguments
+; are allowed. tests a bug in the invoke() method for RestFn with 21 arguments.
+(deftest restfn-arity-exception-test
+  ;; example 30 param function given 25 args
+  (is (thrown-with-msg? clojure.lang.ArityException
+                        #"Wrong number of args \(25\) passed to:.*"
+                        (apply (proxy [clojure.lang.RestFn] []
+                                 (getRequiredArity [] 30))
+                               (range 25))))
+  ;; test 21-30 args
+  (let [f (proxy [clojure.lang.RestFn] []
+            (getRequiredArity [] 30))]
+    (doseq [i (range 22 31)
+            :let [re (re-pattern (format "Wrong number of args \\(%s\\) passed to:.*" i))]]
+      (testing (pr-str re)
+        (is (thrown-with-msg? clojure.lang.ArityException
+                              re
+                              (apply f (range i))))))))

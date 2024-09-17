@@ -83,6 +83,10 @@
    Note that, unlike RSpec, the \"testing\" macro may only be used
    INSIDE a \"deftest\" or \"with-test\" form (see below).
 
+   If an exception is thrown and bubbles to the top of the test, the
+   first \"testing\" form its root cause travelled through is used in
+   the error report.
+
 
    DEFINING TESTS
 
@@ -267,6 +271,10 @@
 (def ^:dynamic *testing-vars* (list))  ; bound to hierarchy of vars being tested
 
 (def ^:dynamic *testing-contexts* (list)) ; bound to hierarchy of "testing" strings
+
+; bound to an atom that contains a map from (the root causes of) exceptions that bubble
+; through "testing" forms to the first testing contexts it crosses.
+(def ^:dynamic *exceptional-testing-contexts* nil)
 
 (def ^:dynamic *test-out* *out*)         ; PrintWriter for test reporting output
 
@@ -594,13 +602,27 @@
     `(temp/do-template ~argv (is ~expr) ~@args)
     (throw (IllegalArgumentException. "The number of args doesn't match are's argv."))))
 
+(defn record-uncaught-exception-contexts
+  "Record exception e as being thrown in the current testing
+  context unless it has already been recorded."
+  {:added "1.12"}
+  [e]
+  (some-> *exceptional-testing-contexts*
+          (swap! update (stack/root-cause e) #(or % *testing-contexts*))))
+
 (defmacro testing
   "Adds a new string to the list of testing contexts.  May be nested,
   but must occur inside a test function (deftest)."
   {:added "1.1"}
   [string & body]
   `(binding [*testing-contexts* (conj *testing-contexts* ~string)]
-     ~@body))
+     (try (do ~@body)
+          (catch Throwable e#
+            ;; `resolve` for backwards compatibility. allows AOT compiled code by future Clojure versions to run on earlier ones.
+            ;; eg., https://clojure.atlassian.net/browse/CLJ-2564?focusedCommentId=48791
+            (when-some [f# (resolve 'record-uncaught-exception-contexts)]
+              (f# e#))
+            (throw e#)))))
 
 
 
@@ -705,6 +727,27 @@
 
 ;;; RUNNING TESTS: LOW-LEVEL FUNCTIONS
 
+(defn report-uncaught-exception
+  "Report an uncaught exception using *exceptional-testing-contexts* to
+  guess the most helpful message."
+  {:added "1.12"}
+  [e]
+  (do-report {:type :error, :message (if-some [etc (some-> *exceptional-testing-contexts* deref (get (stack/root-cause e)))]
+                                       (binding [*testing-contexts* etc]
+                                         (testing-contexts-str))
+                                       "Uncaught exception, not in assertion.")
+              :expected nil, :actual e}))
+
+(defn -run-test-body
+  "A low-level function to run the body of a test (a thunk) with improved
+  error messages on uncaught exceptions."
+  {:added "1.12"}
+  [f]
+  (binding [*exceptional-testing-contexts* (atom {})]
+    (try (f)
+         (catch Throwable e
+           (report-uncaught-exception e)))))
+
 (defn test-var
   "If v has a function in its :test metadata, calls that function,
   with *testing-vars* bound to (conj *testing-vars* v)."
@@ -714,10 +757,7 @@
     (binding [*testing-vars* (conj *testing-vars* v)]
       (do-report {:type :begin-test-var, :var v})
       (inc-report-counter :test)
-      (try (t)
-           (catch Throwable e
-             (do-report {:type :error, :message "Uncaught exception, not in assertion."
-                      :expected nil, :actual e})))
+      (-run-test-body t)
       (do-report {:type :end-test-var, :var v}))))
 
 (defn test-vars

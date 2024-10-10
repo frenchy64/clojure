@@ -10,8 +10,7 @@
 
 
 (ns clojure.test-clojure.parallel
-  (:use clojure.test)
-  (:import [java.util.concurrent Executors ThreadFactory]))
+  (:use clojure.test))
 
 ;; !! Tests for the parallel library will be in a separate file clojure_parallel.clj !!
 
@@ -45,9 +44,10 @@
 ;; improve likelihood of catching a Thread holding onto its thread bindings
 ;; before it's cleared by another job. note this only expands the pool for futures
 ;; and send-off, not send-via.
-(let [d (delay (let [p (promise)]
-                 (mapv deref (mapv #(future (if (= 999 %) (deliver p true) @p)) (range 1000)))))]
-  (defn expand-thread-pool! [] @d))
+(let [pool-size 500
+      d (delay (let [p (promise)]
+                 (mapv deref (mapv #(future (if (= (dec pool-size) %) (deliver p true) @p)) (range pool-size)))))]
+  (defn expand-thread-pool! [] @d nil))
 
 (def ^:dynamic *my-var* :root-binding)
 

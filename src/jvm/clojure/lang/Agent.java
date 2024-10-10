@@ -94,18 +94,12 @@ static class Action implements Runnable{
 			final IFn h = action.agent.errorHandler;
 			if(h != null)
 				{
-			  final	IPersistentMap dynamicBindings = RT.map(Var.find(Symbol.intern("clojure.core", "*agent*")), agent);
 				try
 					{
-					Var.pushThreadBindings(dynamicBindings);
 					h.invoke(agent, error);
 					}
 				catch(Throwable e) {} // ignore errorHandler errors
 				}
-        finally
-        {
-          Var.popThreadBindings();
-        }
 			}
 	}
 

@@ -73,3 +73,22 @@
       (Thread/sleep 1000)
       (System/gc))
     (is (nil? (.get weak-ref)))))
+
+(deftest seque-does-not-leak-memory
+  (let [ready (promise)
+        strong-ref (volatile! (Object.))
+        weak-ref (java.lang.ref.WeakReference. @strong-ref)
+        the-seque (volatile! (seque 1 (cons nil
+                                            (lazy-seq
+                                              (let [s (repeat @strong-ref)]
+                                                (deliver ready true)
+                                                s)))))]
+    @ready
+    (vreset! strong-ref nil)
+    (vreset! the-seque nil)
+    (System/gc)
+    (doseq [i (range 10)
+            :while (some? (.get weak-ref))]
+      (Thread/sleep 1000)
+      (System/gc))
+    (is (nil? (.get weak-ref)))))

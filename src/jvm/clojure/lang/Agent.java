@@ -112,7 +112,7 @@ static class Action implements Runnable{
 			Throwable error = null;
 			
 					// fn conveys bindings, preserve for watches/error handlers
-					Object frame = Var.getThreadBindingFrame();
+					final Object frame = Var.getThreadBindingFrame();
 					try
 						{
 			try

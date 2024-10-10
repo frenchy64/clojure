@@ -91,14 +91,21 @@ static class Action implements Runnable{
 			}
 		catch(Throwable error)
 			{
-			if(agent.errorHandler != null)
+			final IFn h = action.agent.errorHandler;
+			if(h != null)
 				{
+			  final	IPersistentMap dynamicBindings = RT.map(Var.find(Symbol.intern("clojure.core", "*agent*")), agent);
 				try
 					{
-					agent.errorHandler.invoke(agent, error);
+					Var.pushThreadBindings(dynamicBindings);
+					h.invoke(agent, error);
 					}
 				catch(Throwable e) {} // ignore errorHandler errors
 				}
+        finally
+        {
+          Var.popThreadBindings();
+        }
 			}
 	}
 
@@ -108,6 +115,9 @@ static class Action implements Runnable{
 			nested.set(PersistentVector.EMPTY);
 
 			Throwable error = null;
+			Object frame = Var.getThreadBindingFrame();
+					try // reset binding frame after fn propagates bindings to watches and error handlers
+						{
 			try
 				{
 				Object oldval = action.agent.state;
@@ -128,11 +138,12 @@ static class Action implements Runnable{
 			else
 				{
 				nested.set(null); // allow errorHandler to send
-				if(action.agent.errorHandler != null)
+				final IFn h = action.agent.errorHandler;
+				if(h != null)
 					{
 					try
 						{
-						action.agent.errorHandler.invoke(action.agent, error);
+						h.invoke(action.agent, error);
 						}
 					catch(Throwable e) {} // ignore errorHandler errors
 					}
@@ -141,6 +152,11 @@ static class Action implements Runnable{
 					error = null;
 					}
 				}
+						}
+					finally
+						{
+						Var.resetThreadBindingFrame(frame);
+						}
 
 			boolean popped = false;
 			ActionQueue next = null;
@@ -161,16 +177,7 @@ static class Action implements Runnable{
 	}
 
 	public void run(){
-		Object frame = Var.getThreadBindingFrame();
-		try
-			{
-			doRun(this);
-			}
-		finally
-			{
-			// ensure thread bindings conveyed by fn are not held by this Thread
-			Var.resetThreadBindingFrame(frame);
-			}
+		doRun(this);
 	}
 }
 

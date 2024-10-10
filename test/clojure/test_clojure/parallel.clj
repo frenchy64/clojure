@@ -49,15 +49,13 @@
                  (mapv deref (mapv #(future (if (= (dec pool-size) %) (deliver p true) @p)) (range pool-size)))))]
   (defn expand-thread-pool! [] @d nil))
 
-(def ^:dynamic *my-var* :root-binding)
-
 (deftest future-cleans-up-binding-conveyance
   (expand-thread-pool!)
   (let [strong-ref (volatile! (Object.))
         weak-ref (java.lang.ref.WeakReference. @strong-ref)]
-    (binding [*my-var* @strong-ref]
+    (binding [*test-value* @strong-ref]
       @(future
-         (or (identical? @strong-ref *my-var*)
+         (or (identical? @strong-ref *test-value*)
              (throw (Exception.)))))
     (vreset! strong-ref nil)
     (System/gc)

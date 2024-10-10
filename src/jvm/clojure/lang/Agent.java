@@ -141,6 +141,8 @@ static class Action implements Runnable{
 					error = null;
 					}
 				}
+      // fn conveys bindings via Var.resetThreadBindingFrame, which propagate to watches and error handlers.
+      // reset here to avoid memory leak.
       Var.resetThreadBindingFrame(frame);
 
 			boolean popped = false;

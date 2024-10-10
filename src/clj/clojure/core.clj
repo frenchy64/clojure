@@ -7117,7 +7117,11 @@ fails, attempts to require sym's namespace and retries."
    :static true}
   [f]
   (let [f (binding-conveyor-fn f)
-        fut (.submit clojure.lang.Agent/soloExecutor ^Callable f)]
+        fut (.submit clojure.lang.Agent/soloExecutor
+                     ^Callable
+                     #(let [o (clojure.lang.Var/getThreadBindingFrame)]
+                        (try (f)
+                             (finally (clojure.lang.Var/resetThreadBindingFrame o)))))]
     (reify 
      clojure.lang.IDeref 
      (deref [_] (deref-future fut))

@@ -108,10 +108,10 @@ static class Action implements Runnable{
 			nested.set(PersistentVector.EMPTY);
 
 			Throwable error = null;
-			Object frame = Var.getThreadBindingFrame();
 			try
 				{
 				Object oldval = action.agent.state;
+				// conveys bindings via Var.resetThreadBindingFrame, which propagate to watches and error handlers
 				Object newval =  action.fn.applyTo(RT.cons(action.agent.state, action.args));
 				action.agent.setState(newval);
                 action.agent.notifyWatches(oldval,newval);
@@ -141,9 +141,6 @@ static class Action implements Runnable{
 					error = null;
 					}
 				}
-			// fn conveys bindings via Var.resetThreadBindingFrame, which propagate to watches and error handlers.
-			// reset here to avoid memory leak.
-			Var.resetThreadBindingFrame(frame);
 
 			boolean popped = false;
 			ActionQueue next = null;
@@ -164,7 +161,16 @@ static class Action implements Runnable{
 	}
 
 	public void run(){
-		doRun(this);
+		Object frame = Var.getThreadBindingFrame();
+		try
+			{
+			doRun(this);
+			}
+		finally
+			{
+			// ensure thread bindings conveyed by fn are not held by this Thread
+			Var.resetThreadBindingFrame(frame);
+			}
 	}
 }
 

@@ -38,3 +38,47 @@
                  (binding [*print-dup* false]
                    (swap! a conj *test-value*))))
       (is (= [2 2 2] @a)))))
+
+;; improve likelihood of catching a Thread holding onto its thread bindings
+;; before it's cleared by another job. note this only expands the pool for futures
+;; and send-off, not send-via.
+(let [pool-size 500
+      d (delay (let [p (promise)]
+                 (mapv deref (mapv #(future (if (= (dec pool-size) %) (deliver p true) @p)) (range pool-size)))))]
+  (defn expand-thread-pool! [] @d nil))
+
+(deftest sent-agent-does-not-leak-memory
+  (expand-thread-pool!)
+  (let [strong-ref (volatile! (agent nil))
+        weak-ref (java.lang.ref.WeakReference. @strong-ref)]
+    (send-off @strong-ref vector)
+    (doseq [i (range 10)
+            :while (not (vector? @@strong-ref))]
+      (Thread/sleep 1000))
+    (vreset! strong-ref nil)
+    (System/gc)
+    (doseq [i (range 10)
+            :while (some? (.get weak-ref))]
+      (Thread/sleep 1000)
+      (System/gc))
+    (is (nil? (.get weak-ref)))))
+
+(deftest seque-does-not-leak-memory
+  (expand-thread-pool!)
+  (let [ready (promise)
+        strong-ref (volatile! (Object.))
+        weak-ref (java.lang.ref.WeakReference. @strong-ref)
+        the-seque (volatile! (seque 1 (cons nil
+                                            (lazy-seq
+                                              (let [s (repeat @strong-ref)]
+                                                (deliver ready true)
+                                                s)))))]
+    @ready
+    (vreset! strong-ref nil)
+    (vreset! the-seque nil)
+    (System/gc)
+    (doseq [i (range 10)
+            :while (some? (.get weak-ref))]
+      (Thread/sleep 1000)
+      (System/gc))
+    (is (nil? (.get weak-ref)))))

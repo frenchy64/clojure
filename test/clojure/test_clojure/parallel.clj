@@ -31,15 +31,18 @@
 (def ^:dynamic *test-value* 1)
 
 (deftest future-fn-properly-retains-conveyed-bindings
-  (let [a (atom [])]
-    (binding [*test-value* 2]
+  (let [sentinel (Object.)
+        a (atom [])]
+    (binding [*test-value* sentinel]
       @(future (dotimes [_ 3]
                  ;; we need some binding to trigger binding pop
                  (binding [*print-dup* false]
                    (swap! a conj *test-value*)))
-               ;; after CLJ-2619 no pop is needed
-               (swap! a conj *test-value* @(future *test-value*) @(future @(future *test-value*))))
-      (is (= (repeat 6 2) @a)))))
+               (swap! a conj
+                      *test-value*
+                      @(future *test-value*)
+                      @(future @(future *test-value*))))
+      (is (= (repeat 6 sentinel) @a)))))
 
 ;; improve likelihood of catching a Thread holding onto its thread bindings
 ;; before it's cleared by another job. note this only expands the pool for futures

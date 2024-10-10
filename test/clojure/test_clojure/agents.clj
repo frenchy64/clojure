@@ -10,7 +10,7 @@
 
 (ns clojure.test-clojure.agents
   (:use clojure.test)
-  (:import [java.util.concurrent CountDownLatch TimeUnit]))
+  (:import [java.util.concurrent CountDownLatch Executors TimeUnit]))
 
 ;; tests are fragile. If wait fails, could indicate that
 ;; build box is thrashing.
@@ -148,11 +148,61 @@
     (doto (Thread.
            (fn []
              (binding [*bind-me* :thread-binding]
-               (send a (constantly *bind-me*)))
-             (await a)))
+               (send a (let [bind-me *bind-me*]
+                         (fn [_] [bind-me *bind-me*]))))
+              (await a)))
       (.start)
       (.join))
-    (is (= @a :thread-binding))))
+    (is (= @a [:thread-binding :thread-binding]))))
+
+;; this test sends an action to an agent and then attempts to retrieve the bindings on
+;; the action's thread after the action has completed. it might take a few tries
+;; for the second part to work. if it never does, prints a warning instead of failing.
+(deftest send-via-cleans-up-binding-conveyance
+  (let [try-flaky-test
+        (fn []
+          (let [local-executor (Executors/newCachedThreadPool)]
+            (try
+              (let [agt (binding [*bind-me* :thread-binding
+                                  *1 :foo]
+                          (send-via
+                            local-executor
+                            (agent :init)
+                            (fn [_]
+                              (Thread/currentThread))))
+                    _ (await agt)
+                    current-thread @agt
+                    _ (Thread/sleep 100) ;; encourage local-executor to reuse thread
+                    _ (assert (instance? Thread current-thread) (pr-str current-thread))]
+                (deref (.submit local-executor 
+                                ^Callable
+                                (fn* []
+                                  (if (= current-thread (Thread/currentThread))
+                                    (get-thread-bindings)
+                                    :wrong-thread)))
+                       5000 ::timeout))
+              (finally
+                (.shutdown local-executor)))))
+        flaky-test-result (reduce (fn [results _]
+                                    (let [maybe-flaky-result (try-flaky-test)]
+                                      (case maybe-flaky-result
+                                        ::timeout (throw (ex-info "Timeout" {:results (conj results maybe-flaky-result)}))
+                                        ;; retry
+                                        :wrong-thread (conj results maybe-flaky-result)
+                                        (reduced maybe-flaky-result))))
+                                  []
+                                  (range 50))]
+    (cond
+      (map? flaky-test-result) (let [actual-thread-bindings-after-action flaky-test-result]
+                                 (is (= {} actual-thread-bindings-after-action)))
+
+      (every? #{:wrong-thread} flaky-test-result)
+      (println (str "WARNING: " `send-via-cleans-up-binding-conveyance 
+                    " test was very unlucky"
+                    " and could not verify thread bindings. "
+                    flaky-test-result))
+
+      :else (throw (ex-info "Unknown result" {:result flaky-test-result})))))
 
 ;; check for a race condition that was causing seque to leak threads from the
 ;; send-off pool. Specifically, if we consume all items from the seque, and

@@ -111,3 +111,17 @@
                     flaky-test-result))
 
       :else (throw (ex-info "Unknown result" {:result flaky-test-result})))))
+
+(deftest sent-agent-does-not-leak-memory
+  (let [strong-ref (volatile! (agent nil))
+        weak-ref (java.lang.ref.WeakReference. @strong-ref)]
+    (send-off @strong-ref vector)
+    (doseq [i (range 10)
+            :while (not (vector? @@strong-ref))]
+      (Thread/sleep 1000))
+    (vreset! strong-ref nil)
+    (System/gc)
+    (doseq [i (range 10)
+            :while (some? (.get weak-ref))]
+      (Thread/sleep 1000))
+    (is (nil? (.get weak-ref)))))

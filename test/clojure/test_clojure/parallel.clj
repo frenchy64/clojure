@@ -45,8 +45,9 @@
 ;; improve likelihood of catching a Thread holding onto its thread bindings
 ;; before it's cleared by another job. note this only expands the pool for futures
 ;; and send-off, not send-via.
-(defn expand-thread-pool! []
-  (mapv deref (mapv #(future (Thread/sleep (+ % 100))) (range 1000))))
+(let [d (delay (let [p (promise)]
+                 (mapv deref (mapv #(future (if (= 999 %) (deliver p true) @p)) (range 1000)))))]
+  (defn expand-thread-pool! [] @d))
 
 (def ^:dynamic *my-var* :root-binding)
 

@@ -44,73 +44,20 @@
 
 (def ^:dynamic *my-var* :root-binding)
 
-;; this test runs a future and then attempts to retrieve the bindings on
-;; the future's thread after the future has finished. it might take a few tries
-;; for the second part to work. if it never does, prints a warning instead of failing.
 (deftest future-cleans-up-binding-conveyance
-  (let [try-flaky-test
-        (fn []
-          (let [global-solo-executor clojure.lang.Agent/soloExecutor
-                thread-count (atom 0)
-                current-thread-prm (promise)
-                local-executor (Executors/newCachedThreadPool
-                                 (reify ThreadFactory
-                                   (newThread [_ runnable]
-                                     (swap! thread-count inc)
-                                     (Thread. runnable))))]
-            (try
-              (set-agent-send-off-executor! local-executor)
-              (let [f-prm (promise)
-                    f (binding [*my-var* :thread-binding
-                                *1 :foo]
-                        (future
-                          (deliver current-thread-prm (Thread/currentThread))
-                          @f-prm))
-                    _ (set-agent-send-off-executor! global-solo-executor)
-                    ;; there's a chance other futures could have seen local-executor, so wait a bit to
-                    ;; let them start running. if this happens, since f is blocked it will force another
-                    ;; local-executor thread to be created. this will increment thread-count and
-                    ;; trigger a retry on this test.
-                    _ (Thread/sleep 200)
-                    _ (deliver f-prm :done)
-                    _ @f
-                    _ (Thread/sleep 200) ;; encourage local-executor to reuse thread
-                    after-thread-bindings-prm (promise)
-                    result (deref (.submit local-executor
-                                           ^Callable
-                                           (fn* []
-                                             (if (= @current-thread-prm (Thread/currentThread))
-                                               (get-thread-bindings)
-                                               :wrong-thread)))
-                                  5000 ::timeout)
-                    thread-count @thread-count]
-                (cond
-                  (= 1 thread-count) result
-                  ;; something interfered
-                  :else :bad-thread-count))
-              (finally
-                (set-agent-send-off-executor! global-solo-executor)
-                (.shutdown local-executor)))))
-        flaky-test-result (reduce (fn [results _]
-                                    (let [maybe-flaky-result (try-flaky-test)]
-                                      (case maybe-flaky-result
-                                        ::timeout (throw (ex-info "Timeout" {:results (conj results maybe-flaky-result)}))
-                                        ;; retry
-                                        (:wrong-thread :bad-thread-count) (conj results maybe-flaky-result)
-                                        (reduced maybe-flaky-result))))
-                                  []
-                                  (range 50))]
-    (cond
-      (map? flaky-test-result) (let [actual-thread-bindings-after-future flaky-test-result]
-                                 (is (= {} actual-thread-bindings-after-future)))
-
-      (every? #{:wrong-thread :bad-thread-count} flaky-test-result)
-      (println (str "WARNING: " `future-cleans-up-binding-conveyance
-                    " test was very unlucky"
-                    " and could not verify thread bindings. "
-                    flaky-test-result))
-
-      :else (throw (ex-info "Unknown result" {:result flaky-test-result})))))
+  (let [strong-ref (volatile! (Object.))
+        weak-ref (java.lang.ref.WeakReference. @strong-ref)]
+    (binding [*my-var* @strong-ref]
+      @(future
+         (or (identical? @strong-ref *my-var*)
+             (throw (Exception.)))))
+    (vreset! strong-ref nil)
+    (System/gc)
+    (doseq [i (range 10)
+            :while (some? (.get weak-ref))]
+      (Thread/sleep 1000)
+      (System/gc))
+    (is (nil? (.get weak-ref)))))
 
 (deftest sent-agent-does-not-leak-memory
   (let [strong-ref (volatile! (agent nil))
@@ -123,5 +70,6 @@
     (System/gc)
     (doseq [i (range 10)
             :while (some? (.get weak-ref))]
-      (Thread/sleep 1000))
+      (Thread/sleep 1000)
+      (System/gc))
     (is (nil? (.get weak-ref)))))

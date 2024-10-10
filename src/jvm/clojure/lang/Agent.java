@@ -96,6 +96,7 @@ static class Action implements Runnable{
 				{
 				try
 					{
+					// no bindings conveyed via Executor
 					h.invoke(agent, error);
 					}
 				catch(Throwable e) {} // ignore errorHandler errors
@@ -109,13 +110,14 @@ static class Action implements Runnable{
 			nested.set(PersistentVector.EMPTY);
 
 			Throwable error = null;
-			Object frame = Var.getThreadBindingFrame();
-					try // reset binding frame after fn propagates bindings to watches and error handlers
+			
+					// fn conveys bindings, preserve for watches/error handlers
+					Object frame = Var.getThreadBindingFrame();
+					try
 						{
 			try
 				{
 				Object oldval = action.agent.state;
-				// conveys bindings via Var.resetThreadBindingFrame, which propagate to watches and error handlers
 				Object newval =  action.fn.applyTo(RT.cons(action.agent.state, action.args));
 				action.agent.setState(newval);
                 action.agent.notifyWatches(oldval,newval);

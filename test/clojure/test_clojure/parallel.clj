@@ -42,9 +42,16 @@
                (swap! a conj *test-value* @(future *test-value*) @(future @(future *test-value*))))
       (is (= (repeat 6 2) @a)))))
 
+;; improve likelihood of catching a Thread holding onto its thread bindings
+;; before it's cleared by another job. note this only expands the pool for futures
+;; and send-off, not send-via.
+(defn expand-thread-pool! []
+  (mapv deref (mapv #(future (Thread/sleep (+ % 100))) (range 1000))))
+
 (def ^:dynamic *my-var* :root-binding)
 
 (deftest future-cleans-up-binding-conveyance
+  (expand-thread-pool!)
   (let [strong-ref (volatile! (Object.))
         weak-ref (java.lang.ref.WeakReference. @strong-ref)]
     (binding [*my-var* @strong-ref]
@@ -60,6 +67,7 @@
     (is (nil? (.get weak-ref)))))
 
 (deftest sent-agent-does-not-leak-memory
+  (expand-thread-pool!)
   (let [strong-ref (volatile! (agent nil))
         weak-ref (java.lang.ref.WeakReference. @strong-ref)]
     (send-off @strong-ref vector)
@@ -75,6 +83,7 @@
     (is (nil? (.get weak-ref)))))
 
 (deftest seque-does-not-leak-memory
+  (expand-thread-pool!)
   (let [ready (promise)
         strong-ref (volatile! (Object.))
         weak-ref (java.lang.ref.WeakReference. @strong-ref)

@@ -2129,7 +2129,7 @@
   (apply action-fn state-of-agent args)"
   {:added "1.5"}
   [executor ^clojure.lang.Agent a f & args]
-  (.dispatch a (binding [*agent* a] (binding-conveyor-fn f true)) args executor))
+  (.dispatch a (binding [*agent* a] (binding-conveyor-fn f #_true)) args executor))
 
 (defn send
   "Dispatch an action to an agent. Returns the agent immediately.
@@ -7122,7 +7122,7 @@ fails, attempts to require sym's namespace and retries."
   {:added "1.1"
    :static true}
   [f]
-  (let [f (binding-conveyor-fn f true)
+  (let [f (binding-conveyor-fn f #_true)
         fut (.submit clojure.lang.Agent/soloExecutor ^Callable f)]
     (reify 
      clojure.lang.IDeref 

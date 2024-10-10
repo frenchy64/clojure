@@ -91,7 +91,7 @@ static class Action implements Runnable{
 			}
 		catch(Throwable error)
 			{
-			final IFn h = action.agent.errorHandler;
+			final IFn h = agent.errorHandler;
 			if(h != null)
 				{
 				try

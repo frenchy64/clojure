@@ -2129,7 +2129,7 @@
   (apply action-fn state-of-agent args)"
   {:added "1.5"}
   [executor ^clojure.lang.Agent a f & args]
-  (.dispatch a (binding [*agent* a] (binding-conveyor-fn f true)) args executor))
+  (.dispatch a (binding [*agent* a] (binding-conveyor-fn f)) args executor))
 
 (defn send
   "Dispatch an action to an agent. Returns the agent immediately.

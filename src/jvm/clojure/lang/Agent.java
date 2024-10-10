@@ -108,6 +108,7 @@ static class Action implements Runnable{
 			nested.set(PersistentVector.EMPTY);
 
 			Throwable error = null;
+      Object frame = Var.getThreadBindingFrame();
 			try
 				{
 				Object oldval = action.agent.state;
@@ -140,6 +141,7 @@ static class Action implements Runnable{
 					error = null;
 					}
 				}
+      Var.resetThreadBindingFrame(frame);
 
 			boolean popped = false;
 			ActionQueue next = null;

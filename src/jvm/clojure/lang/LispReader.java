@@ -1145,7 +1145,13 @@ public static class SyntaxQuoteReader extends AFn{
             ret = RT.list(SEQ, RT.cons(CONCAT, sqExpandList(seq)));
           }
 				else
-					ret = RT.cons(LIST, sqExpandFlat(seq));
+          {
+          ISeq flat = sqExpandFlat(seq);
+          if(isAllQuoteLiftable(flat))
+            ret = RT.list(QUOTE, sqLiftQuoted(flat));
+          else
+            ret = RT.cons(LIST, flat);
+          }
 				}
 			else
 				throw new UnsupportedOperationException("Unknown Collection type");
@@ -1185,6 +1191,10 @@ public static class SyntaxQuoteReader extends AFn{
         || form instanceof String
         || form == null)
       return true;
+    else if(form instanceof IPersistentVector)
+      {
+      return isAllQuoteLiftable(RT.seq(form));
+      }
     else if(form instanceof ISeq || form instanceof IPersistentList)
       {
       ISeq seq = RT.seq(form);
@@ -1199,12 +1209,14 @@ public static class SyntaxQuoteReader extends AFn{
       return false;
 	}
 
+  //TODO maps
 	private static Object liftQuoted(Object form) {
     if(form instanceof Keyword
         || form instanceof Number
         || form instanceof Character
         || form instanceof String
-        || form == null)
+        || form == null
+        || form instanceof IPersistentVector)
       return form;
     else if(form instanceof ISeq || form instanceof IPersistentList)
       {

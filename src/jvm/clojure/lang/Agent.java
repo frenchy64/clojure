@@ -91,11 +91,13 @@ static class Action implements Runnable{
 			}
 		catch(Throwable error)
 			{
-			if(agent.errorHandler != null)
+			final IFn h = agent.errorHandler;
+			if(h != null)
 				{
 				try
 					{
-					agent.errorHandler.invoke(agent, error);
+					// no bindings conveyed via Executor
+					h.invoke(agent, error);
 					}
 				catch(Throwable e) {} // ignore errorHandler errors
 				}
@@ -108,6 +110,11 @@ static class Action implements Runnable{
 			nested.set(PersistentVector.EMPTY);
 
 			Throwable error = null;
+			
+					// fn conveys bindings, preserve for watches/error handlers
+					final Object frame = Var.getThreadBindingFrame();
+					try
+						{
 			try
 				{
 				Object oldval = action.agent.state;
@@ -127,11 +134,12 @@ static class Action implements Runnable{
 			else
 				{
 				nested.set(null); // allow errorHandler to send
-				if(action.agent.errorHandler != null)
+				final IFn h = action.agent.errorHandler;
+				if(h != null)
 					{
 					try
 						{
-						action.agent.errorHandler.invoke(action.agent, error);
+						h.invoke(action.agent, error);
 						}
 					catch(Throwable e) {} // ignore errorHandler errors
 					}
@@ -140,6 +148,11 @@ static class Action implements Runnable{
 					error = null;
 					}
 				}
+						}
+					finally
+						{
+						Var.resetThreadBindingFrame(frame);
+						}
 
 			boolean popped = false;
 			ActionQueue next = null;

@@ -1284,19 +1284,47 @@ public static class SyntaxQuoteReader extends AFn{
 		return ret.seq();
 	}
 
-  //TODO group contiguous values between unquote-splices
-  // [1 2 ~@a 3 4] => [[1 2] a [3 4]]
 	private static ISeq sqExpandList(ISeq seq) {
 		PersistentVector ret = PersistentVector.EMPTY;
 		for(; seq != null; seq = seq.next())
 			{
 			Object item = seq.first();
-			if(isUnquote(item))
-				ret = ret.cons(RT.list(LIST, RT.second(item)));
-			else if(isUnquoteSplicing(item))
+			if(isUnquoteSplicing(item))
+        {
 				ret = ret.cons(RT.second(item));
-			else
-				ret = ret.cons(RT.list(LIST, syntaxQuote(item)));
+        }
+      else
+        {
+        //group contiguous values between unquote-splices
+        // [1 2 ~@a 3 4] => [[1 2] a [3 4]]
+        // TODO if all quoted, lift to group level
+        IPersistentVector group = PersistentVector.EMPTY;
+        while(true)
+          {
+          if(isUnquote(item))
+            group = group.cons(RT.second(item));
+          else
+            group = group.cons(syntaxQuote(item));
+          seq = seq.next();
+          if(seq != null)
+            {
+            item = seq.first();
+            if(isUnquoteSplicing(item))
+              {
+              ret = ret.cons(group);
+              ret = ret.cons(RT.second(item));
+              break;
+              }
+            }
+          else
+            {
+            ret = ret.cons(group);
+            break;
+            }
+          }
+        }
+      if(seq == null)
+        break;
 			}
 		return ret.seq();
 	}

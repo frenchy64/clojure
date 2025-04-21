@@ -1139,6 +1139,8 @@ public static class SyntaxQuoteReader extends AFn{
 				ISeq seq = RT.seq(form);
 				if(seq == null)
 					ret = PersistentList.EMPTY;
+        //TODO handle `(deftype* ~1 ~2 ~3 ~4 :implements ~5 ~@v1 ~@v2)
+        // as (list* 'deftype* ~1 ~2 ~3 ~4 :implements ~5 (concat v1 v2))
         else if(hasSplice(seq))
           {
           if(hasOnlyTrailingSplice(seq))

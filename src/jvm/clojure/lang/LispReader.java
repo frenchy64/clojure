@@ -1101,8 +1101,16 @@ public static class SyntaxQuoteReader extends AFn{
           }
         else
           {
-            //TODO return array-map if constant
-          ret = RT.cons(HASHMAP, sqExpandFlat(seq));
+          ISeq flat = sqExpandFlat(seq);
+          if(isAllQuoteLiftable(flat))
+            //TODO check if lifted keys are distinct, e.g.,
+            //user=> {'1 '2 1 2}
+            //Syntax error (IllegalArgumentException) compiling at (REPL:0:0).
+            //Duplicate constant keys in map
+            ret = RT.list(QUOTE, (PersistentArrayMap.createAsIfByAssoc(RT.toArray(sqLiftQuoted(flat)))));
+          //TODO if just keys are constant
+          else
+            ret = RT.cons(HASHMAP, flat);
           }
 				}
 			else if(form instanceof IPersistentVector)

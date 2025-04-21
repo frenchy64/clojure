@@ -3238,8 +3238,8 @@
   {:added "1.0"}
   [seq-exprs & body]
   (assert-args
-    (vector? seq-exprs) "a vector for its binding"
-    (even? (count seq-exprs)) "an even number of forms in binding vector")
+     (vector? seq-exprs) "a vector for its binding"
+     (even? (count seq-exprs)) "an even number of forms in binding vector")
   (let [step (fn step [recform exprs]
                (if-not exprs
                  [true `(do ~@body)]

@@ -1093,11 +1093,32 @@ public static class SyntaxQuoteReader extends AFn{
 			else if(form instanceof IPersistentMap)
 				{
 				IPersistentVector keyvals = flattenMap(form);
-				ret = RT.list(APPLY, HASHMAP, RT.list(SEQ, RT.cons(CONCAT, sqExpandList(keyvals.seq()))));
+        ISeq seq = keyvals.seq();
+        if(hasSplice(seq))
+          {
+          ret = RT.list(APPLY, HASHMAP, RT.list(SEQ, RT.cons(CONCAT, sqExpandList(seq))));
+          }
+        else
+          {
+            //TODO return array-map if constant
+          ret = RT.cons(HASHMAP, sqExpandFlat(seq));
+          }
 				}
 			else if(form instanceof IPersistentVector)
 				{
-				ret = RT.list(APPLY, VECTOR, RT.list(SEQ, RT.cons(CONCAT, sqExpandList(((IPersistentVector) form).seq()))));
+        ISeq seq = ((IPersistentVector) form).seq();
+        if(hasSplice(seq))
+          {
+          ret = RT.list(APPLY, VECTOR, RT.list(SEQ, RT.cons(CONCAT, sqExpandList(seq))));
+          }
+        else if(seq == null)
+          {
+          ret = PersistentVector.EMPTY;
+          }
+        else
+          {
+          ret = LazilyPersistentVector.create(sqExpandFlat(seq));
+          }
 				}
 			else if(form instanceof IPersistentSet)
 				{
@@ -1107,7 +1128,7 @@ public static class SyntaxQuoteReader extends AFn{
 				{
 				ISeq seq = RT.seq(form);
 				if(seq == null)
-					ret = RT.cons(LIST,null);
+					ret = PersistentList.EMPTY;
 				else
 					ret = RT.list(SEQ, RT.cons(CONCAT, sqExpandList(seq)));
 				}
@@ -1130,6 +1151,30 @@ public static class SyntaxQuoteReader extends AFn{
 				return RT.list(WITH_META, ret, syntaxQuote(((IObj) form).meta()));
 			}
 		return ret;
+	}
+
+	private static boolean hasSplice(ISeq seq) {
+		for(; seq != null; seq = seq.next())
+			{
+			if(isUnquoteSplicing(seq.first()))
+        return true;
+			}
+    return false;
+	}
+
+	private static ISeq sqExpandFlat(ISeq seq) {
+		PersistentVector ret = PersistentVector.EMPTY;
+		for(; seq != null; seq = seq.next())
+			{
+			Object item = seq.first();
+			if(isUnquote(item))
+				ret = ret.cons(RT.second(item));
+			else if(isUnquoteSplicing(item))
+        throw Util.runtimeException("unexpected splice " + item);
+			else
+				ret = ret.cons(syntaxQuote(item));
+			}
+		return ret.seq();
 	}
 
 	private static ISeq sqExpandList(ISeq seq) {

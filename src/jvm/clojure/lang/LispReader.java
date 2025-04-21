@@ -1109,8 +1109,10 @@ public static class SyntaxQuoteReader extends AFn{
 				{
         ISeq seq = ((IPersistentVector) form).seq();
         if(hasSplice(seq))
-          //TODO splice trailing
-          ret = RT.list(APPLY, VECTOR, RT.cons(CONCAT, sqExpandList(seq)));
+          if(hasOnlyTrailingSplice(seq))
+            ret = RT.cons(APPLY, RT.cons(VECTOR, sqExpandFlat(seq)));
+          else
+            ret = RT.list(APPLY, VECTOR, RT.cons(CONCAT, sqExpandList(seq)));
         else
           {
           ISeq flat = sqExpandFlat(seq);

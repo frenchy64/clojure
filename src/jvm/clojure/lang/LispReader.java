@@ -52,6 +52,7 @@ static Symbol LIST_STAR = Symbol.intern("clojure.core", "list*");
 static Symbol APPLY = Symbol.intern("clojure.core", "apply");
 static Symbol HASHMAP = Symbol.intern("clojure.core", "hash-map");
 static Symbol HASHSET = Symbol.intern("clojure.core", "hash-set");
+static Symbol VEC = Symbol.intern("clojure.core", "vec");
 static Symbol VECTOR = Symbol.intern("clojure.core", "vector");
 static Symbol WITH_META = Symbol.intern("clojure.core", "with-meta");
 static Symbol META = Symbol.intern("clojure.core", "meta");
@@ -1109,10 +1110,12 @@ public static class SyntaxQuoteReader extends AFn{
 				{
         ISeq seq = ((IPersistentVector) form).seq();
         if(hasSplice(seq))
-          if(hasOnlyTrailingSplice(seq))
+          if(seq.count() == 1)
+            ret = RT.cons(VEC, sqExpandList(seq));
+          else if(hasOnlyTrailingSplice(seq))
             ret = RT.cons(APPLY, RT.cons(VECTOR, sqExpandFlat(seq)));
           else
-            ret = RT.list(APPLY, VECTOR, RT.cons(CONCAT, sqExpandList(seq)));
+            ret = RT.list(VEC, RT.cons(CONCAT, sqExpandList(seq)));
         else
           {
           ISeq flat = sqExpandFlat(seq);
@@ -1281,6 +1284,8 @@ public static class SyntaxQuoteReader extends AFn{
 		return ret.seq();
 	}
 
+  //TODO group contiguous values between unquote-splices
+  // [1 2 ~@a 3 4] => [[1 2] a [3 4]]
 	private static ISeq sqExpandList(ISeq seq) {
 		PersistentVector ret = PersistentVector.EMPTY;
 		for(; seq != null; seq = seq.next())

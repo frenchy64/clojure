@@ -48,6 +48,7 @@ static Symbol UNQUOTE_SPLICING = Symbol.intern("clojure.core", "unquote-splicing
 static Symbol CONCAT = Symbol.intern("clojure.core", "concat");
 static Symbol SEQ = Symbol.intern("clojure.core", "seq");
 static Symbol LIST = Symbol.intern("clojure.core", "list");
+static Symbol LIST_STAR = Symbol.intern("clojure.core", "list*");
 static Symbol APPLY = Symbol.intern("clojure.core", "apply");
 static Symbol HASHMAP = Symbol.intern("clojure.core", "hash-map");
 static Symbol HASHSET = Symbol.intern("clojure.core", "hash-set");
@@ -1129,8 +1130,13 @@ public static class SyntaxQuoteReader extends AFn{
 				ISeq seq = RT.seq(form);
 				if(seq == null)
 					ret = PersistentList.EMPTY;
+        else if(hasSplice(seq))
+          if(hasOnlyTrailingSplice(seq))
+            ret = RT.cons(LIST_STAR, sqExpandFlat(seq));
+          else
+            ret = RT.list(SEQ, RT.cons(CONCAT, sqExpandList(seq)));
 				else
-					ret = RT.list(SEQ, RT.cons(CONCAT, sqExpandList(seq)));
+					ret = RT.cons(LIST, sqExpandFlat(seq));
 				}
 			else
 				throw new UnsupportedOperationException("Unknown Collection type");
@@ -1153,6 +1159,15 @@ public static class SyntaxQuoteReader extends AFn{
 		return ret;
 	}
 
+	private static boolean hasOnlyTrailingSplice(ISeq seq) {
+		for(; seq != null; seq = seq.next())
+			{
+			if(isUnquoteSplicing(seq.first()))
+        return seq.next() == null;
+			}
+    throw Util.runtimeException("expected splice");
+	}
+
 	private static boolean hasSplice(ISeq seq) {
 		for(; seq != null; seq = seq.next())
 			{
@@ -1167,10 +1182,8 @@ public static class SyntaxQuoteReader extends AFn{
 		for(; seq != null; seq = seq.next())
 			{
 			Object item = seq.first();
-			if(isUnquote(item))
+			if(isUnquote(item) || isUnquoteSplicing(item))
 				ret = ret.cons(RT.second(item));
-			else if(isUnquoteSplicing(item))
-        throw Util.runtimeException("unexpected splice " + item);
 			else
 				ret = ret.cons(syntaxQuote(item));
 			}

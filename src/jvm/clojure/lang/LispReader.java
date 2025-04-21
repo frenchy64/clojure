@@ -1096,22 +1096,14 @@ public static class SyntaxQuoteReader extends AFn{
 				IPersistentVector keyvals = flattenMap(form);
         ISeq seq = keyvals.seq();
         if(hasSplice(seq))
-          {
-          ret = RT.list(APPLY, HASHMAP, RT.list(SEQ, RT.cons(CONCAT, sqExpandList(seq))));
-          }
+          ret = RT.list(APPLY, HASHMAP, RT.cons(CONCAT, sqExpandList(seq)));
+        else if(seq == null)
+          ret = PersistentArrayMap.EMPTY;
+        else if(seq.count() == 2)
+          ret = PersistentArrayMap.createAsIfByAssoc(RT.toArray(sqExpandFlat(seq)));
+            //TODO flatten constants
         else
-          {
-          ISeq flat = sqExpandFlat(seq);
-          if(isAllQuoteLiftable(flat))
-            //TODO check if lifted keys are distinct, e.g.,
-            //user=> {'1 '2 1 2}
-            //Syntax error (IllegalArgumentException) compiling at (REPL:0:0).
-            //Duplicate constant keys in map
-            ret = RT.list(QUOTE, (PersistentArrayMap.createAsIfByAssoc(RT.toArray(sqLiftQuoted(flat)))));
-          //TODO if just keys are constant
-          else
-            ret = RT.cons(HASHMAP, flat);
-          }
+          ret = RT.cons(HASHMAP, sqExpandFlat(seq));
 				}
 			else if(form instanceof IPersistentVector)
 				{

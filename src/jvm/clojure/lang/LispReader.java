@@ -1109,33 +1109,28 @@ public static class SyntaxQuoteReader extends AFn{
 				{
         ISeq seq = ((IPersistentVector) form).seq();
         if(hasSplice(seq))
-          {
-          ret = RT.list(APPLY, VECTOR, RT.list(SEQ, RT.cons(CONCAT, sqExpandList(seq))));
-          }
-        else if(seq == null)
-          {
-          ret = PersistentVector.EMPTY;
-          }
+          //TODO splice trailing
+          ret = RT.list(APPLY, VECTOR, RT.cons(CONCAT, sqExpandList(seq)));
         else
           {
-          ret = LazilyPersistentVector.create(sqExpandFlat(seq));
+          ISeq flat = sqExpandFlat(seq);
+          if(seq == null)
+            ret = PersistentVector.EMPTY;
+          else if(isAllQuoteLiftable(flat))
+            ret = RT.list(QUOTE, LazilyPersistentVector.create(sqLiftQuoted(flat)));
+          else
+            ret = LazilyPersistentVector.create(flat);
           }
 				}
 			else if(form instanceof IPersistentSet)
 				{
         ISeq seq = ((IPersistentSet) form).seq();
         if(hasSplice(seq))
-          {
-				  ret = RT.list(APPLY, HASHSET, RT.list(SEQ, RT.cons(CONCAT, sqExpandList(seq))));
-          }
+				  ret = RT.list(APPLY, HASHSET, RT.cons(CONCAT, sqExpandList(seq)));
         else if(seq == null)
-          {
           ret = PersistentHashSet.EMPTY;
-          }
         else
-          {
 				  ret = RT.cons(HASHSET, sqExpandFlat(seq));
-          }
 				}
 			else if(form instanceof ISeq || form instanceof IPersistentList)
 				{
@@ -1143,10 +1138,12 @@ public static class SyntaxQuoteReader extends AFn{
 				if(seq == null)
 					ret = PersistentList.EMPTY;
         else if(hasSplice(seq))
+          {
           if(hasOnlyTrailingSplice(seq))
             ret = RT.cons(LIST_STAR, sqExpandFlat(seq));
           else
             ret = RT.list(SEQ, RT.cons(CONCAT, sqExpandList(seq)));
+          }
 				else
 					ret = RT.cons(LIST, sqExpandFlat(seq));
 				}
@@ -1156,7 +1153,8 @@ public static class SyntaxQuoteReader extends AFn{
 		else if(form instanceof Keyword
 		        || form instanceof Number
 		        || form instanceof Character
-		        || form instanceof String)
+		        || form instanceof String
+            || form == null)
 			ret = form;
 		else
 			ret = RT.list(Compiler.QUOTE, form);
@@ -1180,6 +1178,57 @@ public static class SyntaxQuoteReader extends AFn{
     throw Util.runtimeException("expected splice");
 	}
 
+	private static boolean isQuoteLiftable(Object form) {
+    if(form instanceof Keyword
+        || form instanceof Number
+        || form instanceof Character
+        || form instanceof String
+        || form == null)
+      return true;
+    else if(form instanceof ISeq || form instanceof IPersistentList)
+      {
+      ISeq seq = RT.seq(form);
+      if(seq == null)
+        return true;
+      else if(seq.count() == 2 && Util.equals(RT.first(form),QUOTE))
+        return true;
+      else
+        return false;
+      }
+    else
+      return false;
+	}
+
+	private static Object liftQuoted(Object form) {
+    if(form instanceof Keyword
+        || form instanceof Number
+        || form instanceof Character
+        || form instanceof String
+        || form == null)
+      return form;
+    else if(form instanceof ISeq || form instanceof IPersistentList)
+      {
+      ISeq seq = RT.seq(form);
+      if(seq == null)
+        return form;
+      else if(seq.count() == 2 && Util.equals(RT.first(form),QUOTE))
+        return RT.second(seq);
+      else
+        throw Util.runtimeException("cannot lift "+form);
+      }
+    else
+      throw Util.runtimeException("cannot lift"+form);
+	}
+
+	private static boolean isAllQuoteLiftable(ISeq seq) {
+		for(; seq != null; seq = seq.next())
+			{
+			if(!isQuoteLiftable(seq.first()))
+        return false;
+			}
+    return true;
+	}
+
 	private static boolean hasSplice(ISeq seq) {
 		for(; seq != null; seq = seq.next())
 			{
@@ -1189,12 +1238,26 @@ public static class SyntaxQuoteReader extends AFn{
     return false;
 	}
 
+	private static ISeq sqLiftQuoted(ISeq seq) {
+		PersistentVector ret = PersistentVector.EMPTY;
+		for(; seq != null; seq = seq.next())
+			{
+			Object item = seq.first();
+			if(isUnquote(item) || isUnquoteSplicing(item))
+        throw Util.runtimeException("cannot lift unquoted");
+			else
+				ret = ret.cons(liftQuoted(item));
+			}
+		return ret.seq();
+	}
+
 	private static ISeq sqExpandFlat(ISeq seq) {
 		PersistentVector ret = PersistentVector.EMPTY;
 		for(; seq != null; seq = seq.next())
 			{
 			Object item = seq.first();
 			if(isUnquote(item) || isUnquoteSplicing(item))
+        // add splice as collection so it can be passed to list*
 				ret = ret.cons(RT.second(item));
 			else
 				ret = ret.cons(syntaxQuote(item));

@@ -328,7 +328,18 @@
              (vec
                (for [i (range 1 25)]
                  (apply (apply some-fn (repeat i (comp not boolean))) (range i))))
-                 true))))
+                 true)))
+  (testing "returns nil on no match"
+    (doseq [ret-gen [[false]
+                     [nil]
+                     [false nil]]
+            pred-returns (map (fn [i] (repeatedly i #(rand-nth ret-gen)))
+                              (range 1 7))
+            args (map (fn [i] (range i))
+                      (range 6))]
+      (testing [pred-returns args]
+        (is (nil? (apply (apply some-fn (map constantly pred-returns))
+                         args)))))))
 
 
 (deftest test-max-min-key

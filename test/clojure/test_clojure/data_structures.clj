@@ -1361,3 +1361,36 @@
         (= m2 (seq-to-map-for-destructuring (list :a 1 :b 2 {:c 3})))
         (= m3 (seq-to-map-for-destructuring (list :a 1 :b 2 {:a 0})))
         (= a4 nil)))))
+
+(def invoke-colls
+  {clojure.lang.PersistentArrayMap (array-map)
+   clojure.lang.PersistentArrayMap$TransientArrayMap (transient (array-map))
+   clojure.lang.PersistentHashMap (zipmap (range 100) (range 100))
+   clojure.lang.PersistentHashMap$TransientHashMap (transient (zipmap (range 100) (range 100)))
+   clojure.lang.PersistentVector []
+   clojure.lang.PersistentVector$TransientVector (transient [])
+   clojure.lang.PersistentHashSet #{}
+   clojure.lang.PersistentHashSet$TransientHashSet (transient #{})
+   clojure.lang.PersistentTreeMap (sorted-map)
+   clojure.lang.PersistentTreeSet (sorted-set)
+   clojure.lang.MapEntry (first (hash-map 1 2))
+   clojure.lang.PersistentStructMap (struct-map (create-struct :a))
+   ;; extends AFn, but not a collection. note that Var$Unbound also extend AFn
+   ;; but its throwArity method is overriden to not include the number of arguments.
+   clojure.lang.Symbol 'a})
+
+(run! (fn [[c v]] (assert (instance? c v) [c v])) invoke-colls)
+
+(deftest invoke-coll-many-args-test
+  ;; example: collection called with 25 arguments
+  (is (thrown-with-msg? clojure.lang.ArityException
+                        #"Wrong number of args \(25\) passed to:.*"
+                        (apply (array-map) (range 25))))
+  ;; all callable collections with 3-30 arguments
+  (doseq [i (range 3 30)
+          c (vals invoke-colls)
+          :let [re (re-pattern (format "Wrong number of args \\(%s\\) passed to:.*" i))]]
+    (testing (pr-str re)
+      (is (thrown-with-msg? clojure.lang.ArityException
+                            re
+                            (apply {} (range i)))))))

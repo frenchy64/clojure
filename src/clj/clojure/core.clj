@@ -2036,27 +2036,66 @@
    :static true}
   [sym] (. clojure.lang.Var (find sym)))
 
+;if restore? is false (default), bindings should be manually cleared to prevent memory leak
 (defn binding-conveyor-fn
   {:private true
    :added "1.3"}
-  [f]
-  (let [frame (clojure.lang.Var/cloneThreadBindingFrame)]
-    (fn 
-      ([]
-         (clojure.lang.Var/resetThreadBindingFrame frame)
-         (f))
-      ([x]
-         (clojure.lang.Var/resetThreadBindingFrame frame)
-         (f x))
-      ([x y]
-         (clojure.lang.Var/resetThreadBindingFrame frame)
-         (f x y))
-      ([x y z]
-         (clojure.lang.Var/resetThreadBindingFrame frame)
-         (f x y z))
-      ([x y z & args] 
-         (clojure.lang.Var/resetThreadBindingFrame frame)
-         (apply f x y z args)))))
+  ([f] (binding-conveyor-fn f false))
+  ([f restore?]
+   (let [frame (clojure.lang.Var/cloneThreadBindingFrame)]
+     (if restore?
+       (fn
+         ([]
+          (let [previous-frame (clojure.lang.Var/getThreadBindingFrame)]
+            (clojure.lang.Var/resetThreadBindingFrame frame)
+            (try
+              (f)
+              (finally
+                (clojure.lang.Var/resetThreadBindingFrame previous-frame)))))
+         ([x]
+          (let [previous-frame (clojure.lang.Var/getThreadBindingFrame)]
+            (clojure.lang.Var/resetThreadBindingFrame frame)
+            (try
+              (f x)
+              (finally
+                (clojure.lang.Var/resetThreadBindingFrame previous-frame)))))
+         ([x y]
+          (let [previous-frame (clojure.lang.Var/getThreadBindingFrame)]
+            (clojure.lang.Var/resetThreadBindingFrame frame)
+            (try
+              (f x y)
+              (finally
+                (clojure.lang.Var/resetThreadBindingFrame previous-frame)))))
+         ([x y z]
+          (let [previous-frame (clojure.lang.Var/getThreadBindingFrame)]
+            (clojure.lang.Var/resetThreadBindingFrame frame)
+            (try
+              (f x y z)
+              (finally
+                (clojure.lang.Var/resetThreadBindingFrame previous-frame)))))
+         ([x y z & args] 
+          (let [previous-frame (clojure.lang.Var/getThreadBindingFrame)]
+            (clojure.lang.Var/resetThreadBindingFrame frame)
+            (try
+              (apply f x y z args)
+              (finally
+                (clojure.lang.Var/resetThreadBindingFrame previous-frame))))))
+       (fn 
+         ([]
+          (clojure.lang.Var/resetThreadBindingFrame frame)
+          (f))
+         ([x]
+          (clojure.lang.Var/resetThreadBindingFrame frame)
+          (f x))
+         ([x y]
+          (clojure.lang.Var/resetThreadBindingFrame frame)
+          (f x y))
+         ([x y z]
+          (clojure.lang.Var/resetThreadBindingFrame frame)
+          (f x y z))
+         ([x y z & args] 
+          (clojure.lang.Var/resetThreadBindingFrame frame)
+          (apply f x y z args)))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Refs ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defn ^{:private true}
@@ -2123,6 +2162,8 @@
   (apply action-fn state-of-agent args)"
   {:added "1.5"}
   [executor ^clojure.lang.Agent a f & args]
+  ;clearing of conveyed bindings delegated to Agent impl in order to
+  ;first propagate them to error-handler call (if any)
   (.dispatch a (binding [*agent* a] (binding-conveyor-fn f)) args executor))
 
 (defn send
@@ -7116,7 +7157,7 @@ fails, attempts to require sym's namespace and retries."
   {:added "1.1"
    :static true}
   [f]
-  (let [f (binding-conveyor-fn f)
+  (let [f (binding-conveyor-fn f true)
         fut (.submit clojure.lang.Agent/soloExecutor ^Callable f)]
     (reify 
      clojure.lang.IDeref 

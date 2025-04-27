@@ -5891,6 +5891,7 @@
 
 (defonce ^:dynamic
   ^{:private true
+    :deprecated "1.12"
      :doc "A ref to a sorted set of symbols representing loaded libs"}
   *loaded-libs* (ref (sorted-set)))
 
@@ -5903,6 +5904,59 @@
   ^{:private true :doc
      "True while a verbose load is pending"}
   *loading-verbosely* false)
+
+(defonce ^:dynamic
+  ^{:private true
+     :doc "An atom to a sorted set of symbols representing reloaded libs"}
+  *reloaded-libs* nil)
+
+(defonce
+  ^{:private true :doc
+     "An atom containing a map from lib to delay"}
+  lib-loaders (atom {}))
+
+(defn- successful-lib-loader? [d]
+  (and (delay? d) (try @d true (catch Throwable _ false))))
+
+(defn remove-lib
+  "Remove lib's namespace and remove lib from the set of loaded libs."
+  {:added "1.12"}
+  [lib]
+  (let [[{loader lib}] (swap-vals! lib-loaders dissoc lib)]
+    (successful-lib-loader? loader))
+  (dosync (alter @*loaded-libs* disj lib))
+  (remove-ns lib))
+
+(defn- offer-lib-loader
+  [lib offered reloaded-libs]
+  (loop [^clojure.lang.IPending loader (@lib-loaders lib)]
+    (or (when loader
+          (let [offered? (identical? offered loader)]
+            (try (let [_ (when-not (or offered (.isRealized loader))
+                           (when *loading-verbosely*
+                             (println (str "Waiting for ongoing loading of " lib
+                                           " for " (ns-name *ns*)))))
+                       from @loader
+                       needs-reload? (or (not reloaded-libs)
+                                         (@reloaded-libs lib))
+                       _ (when-not offered
+                           (when *loading-verbosely*
+                             (println (str "Concurrent loading of " lib " finished successfully for "
+                                           (:nsym from) ", "
+                                           (if needs-reload?
+                                             (str "needs reload for " (ns-name *ns*))
+                                             (str "no futher loading needed for " (ns-name *ns*)))))))]
+                   needs-reload?)
+                 (catch Throwable e
+                   (when (identical? offered loader)
+                     (throw e))))))
+        (let [{loader lib} (swap! lib-loaders
+                                  (fn [{loader' lib :as m}]
+                                    (if (or (nil? loader')
+                                            (identical? loader loader'))
+                                      (assoc m lib offered)
+                                      m)))]
+          (recur loader)))))
 
 (defn- throw-if
   "Throws a CompilerException with a message if pred is true"
@@ -5958,25 +6012,21 @@
   namespace exists after loading. If require, records the load so any
   duplicate loads can be skipped."
   [lib need-ns require]
+  (prn "load-one" lib)
   (load (root-resource lib))
   (throw-if (and need-ns (not (find-ns lib)))
             "namespace '%s' not found after loading '%s'"
-            lib (root-resource lib))
-  (when require
-    (dosync
-     (commute *loaded-libs* conj lib))))
+            lib (root-resource lib)))
 
 (defn- load-all
   "Loads a lib given its name and forces a load of any libs it directly or
   indirectly loads. If need-ns, ensures that the associated namespace
   exists after loading. If require, records the load so any duplicate loads
   can be skipped."
-  [lib need-ns require]
-  (dosync
-   (commute *loaded-libs* #(reduce1 conj %1 %2)
-            (binding [*loaded-libs* (ref (sorted-set))]
-              (load-one lib need-ns require)
-              @*loaded-libs*))))
+  [lib need-ns _reloaded-libs]
+  (let [reloaded-libs (atom {})]
+    (binding [*reloaded-libs* reloaded-libs]
+      (load-one lib need-ns reloaded-libs))))
 
 (defn- load-lib
   "Loads a lib with options"
@@ -5986,27 +6036,41 @@
             (name lib) prefix)
   (let [lib (if prefix (symbol (str prefix \. lib)) lib)
         opts (apply hash-map options)
-        {:keys [as reload reload-all require use verbose as-alias]} opts
-        loaded (contains? @*loaded-libs* lib)
+        {:keys [as reload reload-all use verbose as-alias]} opts
+        reloaded-libs *reloaded-libs*
+        loaded (or (contains? @*loaded-libs* lib)
+                   (and (successful-lib-loader? (@lib-loaders lib))
+                        (not reload)
+                        (not reload-all)
+                        (if reloaded-libs
+                          (when-some [loader (@reloaded-libs lib)]
+                            @loader
+                            true)
+                          true)))
         need-ns (or as use)
         load (cond reload-all load-all
                    reload load-one
                    (not loaded) (cond need-ns load-one
-                                      as-alias (fn [lib _need _require] (create-ns lib))
+                                      as-alias :as-alias
                                       :else load-one))
-
         filter-opts (select-keys opts '(:exclude :only :rename :refer))
-        undefined-on-entry (not (find-ns lib))]
+        bf (when load
+             (if (= :as-alias load)
+               (do (create-ns lib) nil)
+               (bound-fn []
+                 (binding [*loading-verbosely* (or *loading-verbosely* verbose)]
+                   (let [undefined-on-entry (not (find-ns lib))]
+                     (try (load lib need-ns true)
+                          (catch Throwable e
+                            (when undefined-on-entry
+                              (remove-ns lib))
+                            (throw e)))))
+                 {:lib lib :nsym (ns-name *ns*)})))
+        _ (when bf
+            (offer-lib-loader lib (delay (bf)) reloaded-libs))]
     (binding [*loading-verbosely* (or *loading-verbosely* verbose)]
-      (if load
-        (try
-          (load lib need-ns require)
-          (catch Exception e
-            (when undefined-on-entry
-              (remove-ns lib))
-            (throw e)))
-        (throw-if (and need-ns (not (find-ns lib)))
-          "namespace '%s' not found" lib))
+      (throw-if (and need-ns (not (find-ns lib)))
+                "namespace '%s' not found" lib)
       (when (and need-ns *loading-verbosely*)
         (printf "(clojure.core/in-ns '%s)\n" (ns-name *ns*)))
       (when as
@@ -6133,24 +6197,16 @@
   [& args]
   (apply load-libs :require args))
 
-(defn- serialized-require
-  "Like 'require', but serializes loading.
-  Interim function preferred over 'require' for known asynchronous loads.
-  Future changes may make these equivalent."
-  {:added "1.10"}
-  [& args]
-  (locking clojure.lang.RT/REQUIRE_LOCK
-    (apply require args)))
-
 (defn requiring-resolve
   "Resolves namespace-qualified sym per 'resolve'. If initial resolve
 fails, attempts to require sym's namespace and retries."
   {:added "1.10"}
   [sym]
   (if (qualified-symbol? sym)
-    (or (resolve sym)
-        (do (-> sym namespace symbol serialized-require)
-            (resolve sym)))
+    (let [nsym (-> sym namespace symbol)]
+      (when-not (successful-lib-loader? (@lib-loaders nsym))
+        (require nsym))
+      (resolve sym))
     (throw (IllegalArgumentException. (str "Not a qualified symbol: " sym)))))
 
 (defn use
@@ -6167,7 +6223,13 @@ fails, attempts to require sym's namespace and retries."
 (defn loaded-libs
   "Returns a sorted set of symbols naming the currently loaded libs"
   {:added "1.0"}
-  [] @*loaded-libs*)
+  [] (persistent!
+       (reduce1 (fn [s [lib loader]]
+                  (if (successful-lib-loader? loader)
+                    (conj s lib)
+                    s))
+                (transient @*loaded-libs*)
+                @lib-loaders)))
 
 (defn load
   "Loads Clojure code from resources in classpath. A path is interpreted as
@@ -6185,7 +6247,8 @@ fails, attempts to require sym's namespace and retries."
         (flush))
       (check-cyclic-dependency path)
       (when-not (= path (first *pending-paths*))
-        (binding [*pending-paths* (conj *pending-paths* path)]
+        (binding [*pending-paths* (conj *pending-paths* path)
+                  *loaded-libs* (ref (sorted-set))]
           (clojure.lang.RT/load (.substring path 1)))))))
 
 (defn compile
@@ -6196,6 +6259,7 @@ fails, attempts to require sym's namespace and retries."
   be in the classpath."
   {:added "1.0"}
   [lib]
+  (prn "compile" lib)
   (binding [*compile-files* true]
     (load-one lib true true))
   lib)

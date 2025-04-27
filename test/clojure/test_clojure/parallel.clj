@@ -38,3 +38,27 @@
                  (binding [*print-dup* false]
                    (swap! a conj *test-value*))))
       (is (= [2 2 2] @a)))))
+
+;; improve likelihood of catching a Thread holding onto its thread bindings
+;; before it's cleared by another job. note this only expands the pool for futures
+;; and send-off, not send-via.
+(let [pool-size 500
+      d (delay (let [p (promise)]
+                 (mapv deref (mapv #(future (if (= (dec pool-size) %) (deliver p true) @p)) (range pool-size)))))]
+  (defn expand-thread-pool! [] @d nil))
+
+(deftest future-cleans-up-binding-conveyance
+  (expand-thread-pool!)
+  (let [strong-ref (volatile! (Object.))
+        weak-ref (java.lang.ref.WeakReference. @strong-ref)]
+    (binding [*test-value* @strong-ref]
+      @(future
+         (or (identical? @strong-ref *test-value*)
+             (throw (Exception.)))))
+    (vreset! strong-ref nil)
+    (System/gc)
+    (doseq [i (range 10)
+            :while (some? (.get weak-ref))]
+      (Thread/sleep 1000)
+      (System/gc))
+    (is (nil? (.get weak-ref)))))

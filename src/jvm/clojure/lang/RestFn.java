@@ -4078,7 +4078,7 @@ public Object invoke(Object arg1, Object arg2, Object arg3, Object arg4, Object 
                                         Util.ret1(arg16,arg16=null), Util.ret1(arg17,arg17=null), Util.ret1(arg18,arg18=null), 
                                         Util.ret1(arg19,arg19=null), Util.ret1(arg20,arg20=null), ArraySeq.create(args));
 		default:
-			return throwArity(21);
+			return throwArity(20 + args.length);
 		}
 
 }

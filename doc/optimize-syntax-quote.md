@@ -6,7 +6,6 @@
        e.g., there's less code to retraverse/optimize if you can directly
              generate more efficient code with little overhead.
 
-
 ## Benefits
 
 - syntax quotes compile to fewer bytecode instructions
@@ -24,9 +23,16 @@
       - e.g., (syntax-quote nil) => (quote nil) => analyze => analyzeSeq => ConstantExpr/.parse => NIL_EXPR
               vs
               (syntax-quote nil) => nil => analyze => NIL_EXPR
+      - e.g., (syntax-quote []) => (apply vector (seq (concat))) => analyze => analyzeSeq => ....=>....
+              vs
+              (syntax-quote []) => [] => analyze => EmptyExpr([])
+      - e.g., (syntax-quote [{:keys [a]}]) => (apply vector (seq (concat [(apply hash-map ...)]))) => analyzeSeq => macroexpand-1 => ... => InvokeExpr
+              vs
+              (syntax-quote [{:keys [a]}]) => [{:keys ['a]]] => ... => VectorExpr<MapExpr>
   - faster loading of macros
     - fewer instructions to compile
     - tho maybe more work compiling constants
+      - see previous point on why it might actually be faster overall
   - smaller AOT footprint for defmacro-heavy libs
     - e.g., clojure.jar 0.5% smaller
   - HotSpot prefers smaller code size

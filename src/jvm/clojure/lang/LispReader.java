@@ -46,7 +46,7 @@ static final Symbol THE_VAR = Symbol.intern("var");
 static Symbol UNQUOTE = Symbol.intern("clojure.core", "unquote");
 static Symbol UNQUOTE_SPLICING = Symbol.intern("clojure.core", "unquote-splicing");
 static Symbol CONCAT = Symbol.intern("clojure.core", "concat");
-static Symbol SEQ = Symbol.intern("clojure.core", "seq");
+//static Symbol SEQ = Symbol.intern("clojure.core", "seq");
 static Symbol LIST = Symbol.intern("clojure.core", "list");
 static Symbol LIST_STAR = Symbol.intern("clojure.core", "list*");
 static Symbol APPLY = Symbol.intern("clojure.core", "apply");
@@ -1164,9 +1164,11 @@ public static class SyntaxQuoteReader extends AFn{
 					// `(a b ~@c) => (list* a b c)
 					if(hasOnlyTrailingSplice(seq))
 						ret = RT.cons(LIST_STAR, sqExpandFlat(seq));
-					// `(~@a b ~@c) => (seq (concat a [b] c))
+					// `(~@a b ~@c) => (list* (concat a [b] c))
+					// using list* instead of seq here to handle (~@a ~@b) when a=() b=().
+					// since (seq (concat () ())) => nil.
 					else
-						ret = RT.list(SEQ, RT.cons(CONCAT, sqExpandList(seq)));
+						ret = RT.list(LIST_STAR, RT.cons(CONCAT, sqExpandList(seq)));
 					}
 				else
 					{
@@ -1186,6 +1188,7 @@ public static class SyntaxQuoteReader extends AFn{
 		        || form instanceof Number
 		        || form instanceof Character
 		        || form instanceof String
+		        // `nil => nil
 		        || form == null)
 			ret = form;
 		else

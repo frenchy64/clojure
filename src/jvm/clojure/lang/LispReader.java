@@ -1186,37 +1186,37 @@ public static class SyntaxQuoteReader extends AFn{
 		for(; seq != null; seq = seq.next())
 			{
 			if(isUnquoteSplicing(seq.first()))
-        return seq.next() == null;
+				return seq.next() == null;
 			}
-    throw Util.runtimeException("expected splice");
+		throw Util.runtimeException("expected splice");
 	}
 
 	private static boolean isQuoteLiftable(Object form) {
 		if(form instanceof Keyword
-		    || form instanceof Number
-		    || form instanceof Character
-		    || form instanceof String
-		    || form == null)
-		  return true;
+				|| form instanceof Number
+				|| form instanceof Character
+				|| form instanceof String
+				|| form == null)
+			return true;
 		else if(form instanceof IPersistentVector)
-		  {
-		  return isAllQuoteLiftable(RT.seq(form));
-		  }
+			{
+			return isAllQuoteLiftable(RT.seq(form));
+			}
 		else if(form instanceof ISeq || form instanceof IPersistentList)
-		  {
-		  ISeq seq = RT.seq(form);
-		  if(seq == null)
-		    return true;
-		  else if(seq.count() == 2 && Util.equals(RT.first(form),QUOTE))
-		    return true;
-		  else
-		    return false;
-		  }
+			{
+			ISeq seq = RT.seq(form);
+			if(seq == null)
+				return true;
+			else if(seq.count() == 2 && Util.equals(RT.first(form),QUOTE))
+				return true;
+			else
+				return false;
+			}
 		else
-		  return false;
+			return false;
 	}
 
-  //TODO maps
+	//TODO maps
 	private static Object liftQuoted(Object form) {
 		if(form instanceof Keyword
 		    || form instanceof Number

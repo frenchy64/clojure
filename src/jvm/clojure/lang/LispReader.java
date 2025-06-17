@@ -1043,30 +1043,30 @@ public static class SyntaxQuoteReader extends AFn{
 				{
 				// Simply quote method names.
 				}
-            else if(resolver != null)
-                {
-                Symbol nsym = null;
-                if(sym.ns != null){
-                    Symbol alias = Symbol.intern(null, sym.ns);
-                    nsym = resolver.resolveClass(alias);
-                    if(nsym == null)
-                        nsym = resolver.resolveAlias(alias);
-                    }
-                if(nsym != null){
-                    // Classname/foo -> package.qualified.Classname/foo
-                    sym = Symbol.intern(nsym.name, sym.name);
-                    }
-                else if(sym.ns == null){
-                    Symbol rsym = resolver.resolveClass(sym);
-                    if(rsym == null)
-                        rsym = resolver.resolveVar(sym);
-                    if(rsym != null)
-                        sym = rsym;
-                    else
-                        sym = Symbol.intern(resolver.currentNS().name,sym.name);
-                }
-                //leave alone if qualified
-                }
+			else if(resolver != null)
+				{
+					Symbol nsym = null;
+					if(sym.ns != null){
+						Symbol alias = Symbol.intern(null, sym.ns);
+						nsym = resolver.resolveClass(alias);
+						if(nsym == null)
+						    nsym = resolver.resolveAlias(alias);
+						}
+					if(nsym != null){
+						// Classname/foo -> package.qualified.Classname/foo
+						sym = Symbol.intern(nsym.name, sym.name);
+						}
+					else if(sym.ns == null){
+						Symbol rsym = resolver.resolveClass(sym);
+						if(rsym == null)
+							rsym = resolver.resolveVar(sym);
+						if(rsym != null)
+							sym = rsym;
+						else
+							sym = Symbol.intern(resolver.currentNS().name,sym.name);
+					}
+					//leave alone if qualified
+					}
 			else
 				{
 				Object maybeClass = null;
@@ -1095,70 +1095,70 @@ public static class SyntaxQuoteReader extends AFn{
 			else if(form instanceof IPersistentMap)
 				{
 				IPersistentVector keyvals = flattenMap(form);
-        ISeq seq = keyvals.seq();
-        if(hasSplice(seq))
-          ret = RT.list(APPLY, HASHMAP, RT.cons(CONCAT, sqExpandList(seq)));
-        else if(seq == null)
-          ret = PersistentArrayMap.EMPTY;
-        else if(seq.count() == 2)
-          ret = PersistentArrayMap.createAsIfByAssoc(RT.toArray(sqExpandFlat(seq)));
-            //TODO flatten constants
-        else
-          ret = RT.cons(HASHMAP, sqExpandFlat(seq));
+				ISeq seq = keyvals.seq();
+				if(hasSplice(seq))
+					ret = RT.list(APPLY, HASHMAP, RT.cons(CONCAT, sqExpandList(seq)));
+				else if(seq == null)
+					ret = PersistentArrayMap.EMPTY;
+				else if(seq.count() == 2)
+					ret = PersistentArrayMap.createAsIfByAssoc(RT.toArray(sqExpandFlat(seq)));
+					//TODO flatten constants
+				else
+					ret = RT.cons(HASHMAP, sqExpandFlat(seq));
 				}
 			else if(form instanceof IPersistentVector)
 				{
-        ISeq seq = ((IPersistentVector) form).seq();
-        if(hasSplice(seq))
-          if(seq.count() == 1)
-            ret = RT.cons(VEC, sqExpandList(seq));
-          else if(hasOnlyTrailingSplice(seq))
-            ret = RT.cons(APPLY, RT.cons(VECTOR, sqExpandFlat(seq)));
-          else
-            ret = RT.list(VEC, RT.cons(CONCAT, sqExpandList(seq)));
-        else
-          {
-          ISeq flat = sqExpandFlat(seq);
-          if(seq == null)
-            ret = PersistentVector.EMPTY;
-          else if(isAllQuoteLiftable(flat))
-            ret = RT.list(QUOTE, LazilyPersistentVector.create(sqLiftQuoted(flat)));
-          else
-            ret = LazilyPersistentVector.create(flat);
-          }
+				ISeq seq = ((IPersistentVector) form).seq();
+				if(hasSplice(seq))
+					if(seq.count() == 1)
+						ret = RT.cons(VEC, sqExpandList(seq));
+					else if(hasOnlyTrailingSplice(seq))
+						ret = RT.cons(APPLY, RT.cons(VECTOR, sqExpandFlat(seq)));
+					else
+						ret = RT.list(VEC, RT.cons(CONCAT, sqExpandList(seq)));
+				else
+					{
+					ISeq flat = sqExpandFlat(seq);
+					if(seq == null)
+						ret = PersistentVector.EMPTY;
+					else if(isAllQuoteLiftable(flat))
+						ret = RT.list(QUOTE, LazilyPersistentVector.create(sqLiftQuoted(flat)));
+					else
+						ret = LazilyPersistentVector.create(flat);
+					}
 				}
 			else if(form instanceof IPersistentSet)
 				{
-        ISeq seq = ((IPersistentSet) form).seq();
-        if(hasSplice(seq))
-				  ret = RT.list(APPLY, HASHSET, RT.cons(CONCAT, sqExpandList(seq)));
-        else if(seq == null)
-          ret = PersistentHashSet.EMPTY;
-        else
-				  ret = RT.cons(HASHSET, sqExpandFlat(seq));
+				ISeq seq = ((IPersistentSet) form).seq();
+				if(hasSplice(seq))
+					ret = RT.list(APPLY, HASHSET, RT.cons(CONCAT, sqExpandList(seq)));
+				else if(seq == null)
+					ret = PersistentHashSet.EMPTY;
+				else
+					ret = RT.cons(HASHSET, sqExpandFlat(seq));
 				}
 			else if(form instanceof ISeq || form instanceof IPersistentList)
 				{
 				ISeq seq = RT.seq(form);
 				if(seq == null)
 					ret = PersistentList.EMPTY;
-        //TODO handle `(deftype* ~1 ~2 ~3 ~4 :implements ~5 ~@v1 ~@v2)
-        // as (list* 'deftype* ~1 ~2 ~3 ~4 :implements ~5 (concat v1 v2))
-        else if(hasSplice(seq))
-          {
-          if(hasOnlyTrailingSplice(seq))
-            ret = RT.cons(LIST_STAR, sqExpandFlat(seq));
-          else
-            ret = RT.list(SEQ, RT.cons(CONCAT, sqExpandList(seq)));
-          }
+				//TODO handle `(deftype* ~1 ~2 ~3 ~4 :implements ~5 ~@v1 ~@v2)
+				// as (list* 'deftype* ~1 ~2 ~3 ~4 :implements ~5 (concat v1 v2))
+				else if(hasSplice(seq))
+					{
+					if(hasOnlyTrailingSplice(seq))
+						ret = RT.cons(LIST_STAR, sqExpandFlat(seq));
+					else
+						ret = RT.list(SEQ, RT.cons(CONCAT, sqExpandList(seq)));
+					}
 				else
-          {
-          ISeq flat = sqExpandFlat(seq);
-          if(isAllQuoteLiftable(flat))
-            ret = RT.list(QUOTE, sqLiftQuoted(flat));
-          else
-            ret = RT.cons(LIST, flat);
-          }
+					{
+					ISeq flat = sqExpandFlat(seq);
+					if(isAllQuoteLiftable(flat))
+						ret = RT.list(QUOTE, sqLiftQuoted(flat));
+					else
+						ret = RT.cons(LIST, flat);
+					}
 				}
 			else
 				throw new UnsupportedOperationException("Unknown Collection type");
@@ -1167,7 +1167,7 @@ public static class SyntaxQuoteReader extends AFn{
 		        || form instanceof Number
 		        || form instanceof Character
 		        || form instanceof String
-            || form == null)
+		        || form == null)
 			ret = form;
 		else
 			ret = RT.list(Compiler.QUOTE, form);
@@ -1192,69 +1192,69 @@ public static class SyntaxQuoteReader extends AFn{
 	}
 
 	private static boolean isQuoteLiftable(Object form) {
-    if(form instanceof Keyword
-        || form instanceof Number
-        || form instanceof Character
-        || form instanceof String
-        || form == null)
-      return true;
-    else if(form instanceof IPersistentVector)
-      {
-      return isAllQuoteLiftable(RT.seq(form));
-      }
-    else if(form instanceof ISeq || form instanceof IPersistentList)
-      {
-      ISeq seq = RT.seq(form);
-      if(seq == null)
-        return true;
-      else if(seq.count() == 2 && Util.equals(RT.first(form),QUOTE))
-        return true;
-      else
-        return false;
-      }
-    else
-      return false;
+		if(form instanceof Keyword
+		    || form instanceof Number
+		    || form instanceof Character
+		    || form instanceof String
+		    || form == null)
+		  return true;
+		else if(form instanceof IPersistentVector)
+		  {
+		  return isAllQuoteLiftable(RT.seq(form));
+		  }
+		else if(form instanceof ISeq || form instanceof IPersistentList)
+		  {
+		  ISeq seq = RT.seq(form);
+		  if(seq == null)
+		    return true;
+		  else if(seq.count() == 2 && Util.equals(RT.first(form),QUOTE))
+		    return true;
+		  else
+		    return false;
+		  }
+		else
+		  return false;
 	}
 
   //TODO maps
 	private static Object liftQuoted(Object form) {
-    if(form instanceof Keyword
-        || form instanceof Number
-        || form instanceof Character
-        || form instanceof String
-        || form == null
-        || form instanceof IPersistentVector)
-      return form;
-    else if(form instanceof ISeq || form instanceof IPersistentList)
-      {
-      ISeq seq = RT.seq(form);
-      if(seq == null)
-        return form;
-      else if(seq.count() == 2 && Util.equals(RT.first(form),QUOTE))
-        return RT.second(seq);
-      else
-        throw Util.runtimeException("cannot lift "+form);
-      }
-    else
-      throw Util.runtimeException("cannot lift"+form);
+		if(form instanceof Keyword
+		    || form instanceof Number
+		    || form instanceof Character
+		    || form instanceof String
+		    || form == null
+		    || form instanceof IPersistentVector)
+		  return form;
+		else if(form instanceof ISeq || form instanceof IPersistentList)
+		  {
+		  ISeq seq = RT.seq(form);
+		  if(seq == null)
+		    return form;
+		  else if(seq.count() == 2 && Util.equals(RT.first(form),QUOTE))
+		    return RT.second(seq);
+		  else
+		    throw Util.runtimeException("cannot lift "+form);
+		  }
+		else
+		  throw Util.runtimeException("cannot lift"+form);
 	}
 
 	private static boolean isAllQuoteLiftable(ISeq seq) {
 		for(; seq != null; seq = seq.next())
 			{
 			if(!isQuoteLiftable(seq.first()))
-        return false;
+				return false;
 			}
-    return true;
+		return true;
 	}
 
 	private static boolean hasSplice(ISeq seq) {
 		for(; seq != null; seq = seq.next())
 			{
 			if(isUnquoteSplicing(seq.first()))
-        return true;
+				return true;
 			}
-    return false;
+		return false;
 	}
 
 	private static ISeq sqLiftQuoted(ISeq seq) {
@@ -1263,7 +1263,7 @@ public static class SyntaxQuoteReader extends AFn{
 			{
 			Object item = seq.first();
 			if(isUnquote(item) || isUnquoteSplicing(item))
-        throw Util.runtimeException("cannot lift unquoted");
+				throw Util.runtimeException("cannot lift unquoted");
 			else
 				ret = ret.cons(liftQuoted(item));
 			}
@@ -1276,7 +1276,7 @@ public static class SyntaxQuoteReader extends AFn{
 			{
 			Object item = seq.first();
 			if(isUnquote(item) || isUnquoteSplicing(item))
-        // add splice as collection so it can be passed to list*
+				// add splice as collection so it can be passed to list*
 				ret = ret.cons(RT.second(item));
 			else
 				ret = ret.cons(syntaxQuote(item));
@@ -1290,41 +1290,41 @@ public static class SyntaxQuoteReader extends AFn{
 			{
 			Object item = seq.first();
 			if(isUnquoteSplicing(item))
-        {
+				{
 				ret = ret.cons(RT.second(item));
-        }
-      else
-        {
-        //group contiguous values between unquote-splices
-        // [1 2 ~@a 3 4] => [[1 2] a [3 4]]
-        // TODO if all quoted, lift to group level
-        IPersistentVector group = PersistentVector.EMPTY;
-        while(true)
-          {
-          if(isUnquote(item))
-            group = group.cons(RT.second(item));
-          else
-            group = group.cons(syntaxQuote(item));
-          seq = seq.next();
-          if(seq != null)
-            {
-            item = seq.first();
-            if(isUnquoteSplicing(item))
-              {
-              ret = ret.cons(group);
-              ret = ret.cons(RT.second(item));
-              break;
-              }
-            }
-          else
-            {
-            ret = ret.cons(group);
-            break;
-            }
-          }
-        }
-      if(seq == null)
-        break;
+				}
+			else
+				{
+				//group contiguous values between unquote-splices
+				// [1 2 ~@a 3 4] => [[1 2] a [3 4]]
+				// TODO if all quoted, lift to group level
+				IPersistentVector group = PersistentVector.EMPTY;
+				while(true)
+					{
+					if(isUnquote(item))
+						group = group.cons(RT.second(item));
+					else
+						group = group.cons(syntaxQuote(item));
+					seq = seq.next();
+					if(seq != null)
+						{
+						item = seq.first();
+						if(isUnquoteSplicing(item))
+							{
+							ret = ret.cons(group);
+							ret = ret.cons(RT.second(item));
+							break;
+							}
+						}
+					else
+						{
+						ret = ret.cons(group);
+						break;
+						}
+					}
+				}
+			if(seq == null)
+				break;
 			}
 		return ret.seq();
 	}

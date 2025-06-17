@@ -1096,13 +1096,17 @@ public static class SyntaxQuoteReader extends AFn{
 				{
 				IPersistentVector keyvals = flattenMap(form);
 				ISeq seq = keyvals.seq();
+				// `{~@k ~@v} => (apply hash-map (concat k v))
 				if(hasSplice(seq))
 					ret = RT.list(APPLY, HASHMAP, RT.cons(CONCAT, sqExpandList(seq)));
+				// `{} => {}
 				else if(seq == null)
 					ret = PersistentArrayMap.EMPTY;
+				// `{k v} => {k v}
 				else if(seq.count() == 2)
 					ret = PersistentArrayMap.createAsIfByAssoc(RT.toArray(sqExpandFlat(seq)));
 					//TODO flatten constants
+				// `{k v ...} => (hash-map k v ...)
 				else
 					ret = RT.cons(HASHMAP, sqExpandFlat(seq));
 				}
@@ -1110,19 +1114,25 @@ public static class SyntaxQuoteReader extends AFn{
 				{
 				ISeq seq = ((IPersistentVector) form).seq();
 				if(hasSplice(seq))
+					// `[~@v] => (vec v)
 					if(seq.count() == 1)
 						ret = RT.cons(VEC, sqExpandList(seq));
+					// `[a b ~@c] => (apply vector a b c)
 					else if(hasOnlyTrailingSplice(seq))
 						ret = RT.cons(APPLY, RT.cons(VECTOR, sqExpandFlat(seq)));
+					// `[~@a b ~@c] => (vec (concat a [b] c))
 					else
 						ret = RT.list(VEC, RT.cons(CONCAT, sqExpandList(seq)));
 				else
 					{
 					ISeq flat = sqExpandFlat(seq);
+					// `[] => []
 					if(seq == null)
 						ret = PersistentVector.EMPTY;
+					// `[:a 1 'b] => '[:a 1 b]
 					else if(isAllQuoteLiftable(flat))
 						ret = RT.list(QUOTE, LazilyPersistentVector.create(sqLiftQuoted(flat)));
+					// `[a b c] => [a b c]
 					else
 						ret = LazilyPersistentVector.create(flat);
 					}
@@ -1130,32 +1140,41 @@ public static class SyntaxQuoteReader extends AFn{
 			else if(form instanceof IPersistentSet)
 				{
 				ISeq seq = ((IPersistentSet) form).seq();
+				// `#{~@a b ~@c} => (apply hash-set (concat a [b] c))
 				if(hasSplice(seq))
 					ret = RT.list(APPLY, HASHSET, RT.cons(CONCAT, sqExpandList(seq)));
+				// `#{} => #{}
 				else if(seq == null)
 					ret = PersistentHashSet.EMPTY;
+				// `#{a b c} => (hash-set a b c)
 				else
 					ret = RT.cons(HASHSET, sqExpandFlat(seq));
 				}
 			else if(form instanceof ISeq || form instanceof IPersistentList)
 				{
 				ISeq seq = RT.seq(form);
+				// `() => ()
 				if(seq == null)
 					ret = PersistentList.EMPTY;
-				//TODO handle `(deftype* ~1 ~2 ~3 ~4 :implements ~5 ~@v1 ~@v2)
-				// as (list* 'deftype* ~1 ~2 ~3 ~4 :implements ~5 (concat v1 v2))
+				//TODO use list* leading args until first splice.
+				// e.g., `(deftype* ~1 ~2 ~3 ~4 :implements ~5 ~@v1 ~@v2)
+				//       => (list* 'deftype* 1 2 3 4 :implements 5 (concat v1 v2))
 				else if(hasSplice(seq))
 					{
+					// `(a b ~@c) => (list* a b c)
 					if(hasOnlyTrailingSplice(seq))
 						ret = RT.cons(LIST_STAR, sqExpandFlat(seq));
+					// `(~@a b ~@c) => (seq (concat a [b] c))
 					else
 						ret = RT.list(SEQ, RT.cons(CONCAT, sqExpandList(seq)));
 					}
 				else
 					{
 					ISeq flat = sqExpandFlat(seq);
+					// `(:a 1 'b) => '(:a 1 b)
 					if(isAllQuoteLiftable(flat))
 						ret = RT.list(QUOTE, sqLiftQuoted(flat));
+					// `(a b c) => (list a b c)
 					else
 						ret = RT.cons(LIST, flat);
 					}
@@ -1182,6 +1201,8 @@ public static class SyntaxQuoteReader extends AFn{
 		return ret;
 	}
 
+	// returns true iff only the final seq elem is ~@.
+	// throws if seq has no splices.
 	private static boolean hasOnlyTrailingSplice(ISeq seq) {
 		for(; seq != null; seq = seq.next())
 			{
@@ -1191,6 +1212,7 @@ public static class SyntaxQuoteReader extends AFn{
 		throw Util.runtimeException("expected splice");
 	}
 
+	// returns true if form is or can be converted to a constant.
 	private static boolean isQuoteLiftable(Object form) {
 		if(form instanceof Keyword
 				|| form instanceof Number
@@ -1200,15 +1222,20 @@ public static class SyntaxQuoteReader extends AFn{
 			return true;
 		else if(form instanceof IPersistentVector)
 			{
+			// [:a 1 'b] => true (transform to (quote [:a 1 b]))
+			// [a b c]   => false
 			return isAllQuoteLiftable(RT.seq(form));
 			}
 		else if(form instanceof ISeq || form instanceof IPersistentList)
 			{
 			ISeq seq = RT.seq(form);
+			// () => true (already constant)
 			if(seq == null)
 				return true;
+			// (quote X) => true (already constant)
 			else if(seq.count() == 2 && Util.equals(RT.first(form),QUOTE))
 				return true;
+			// (+ 1 2) => false
 			else
 				return false;
 			}
@@ -1239,6 +1266,7 @@ public static class SyntaxQuoteReader extends AFn{
 		  throw Util.runtimeException("cannot lift"+form);
 	}
 
+	// returns true iff all seq elems can be converted to constants
 	private static boolean isAllQuoteLiftable(ISeq seq) {
 		for(; seq != null; seq = seq.next())
 			{
@@ -1248,6 +1276,7 @@ public static class SyntaxQuoteReader extends AFn{
 		return true;
 	}
 
+	// returns true iff seq contains ~@
 	private static boolean hasSplice(ISeq seq) {
 		for(; seq != null; seq = seq.next())
 			{
@@ -1257,6 +1286,8 @@ public static class SyntaxQuoteReader extends AFn{
 		return false;
 	}
 
+	// transform each element of seq as if seq was already (syntax) quoted
+	// sqLiftQuoted(('a 1 :b)) => (a 1 :b)
 	private static ISeq sqLiftQuoted(ISeq seq) {
 		PersistentVector ret = PersistentVector.EMPTY;
 		for(; seq != null; seq = seq.next())

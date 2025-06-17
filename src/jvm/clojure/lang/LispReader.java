@@ -1243,6 +1243,7 @@ public static class SyntaxQuoteReader extends AFn{
 			return false;
 	}
 
+	// transform form as if it was already (syntax) quoted.
 	//TODO maps
 	private static Object liftQuoted(Object form) {
 		if(form instanceof Keyword
@@ -1286,8 +1287,9 @@ public static class SyntaxQuoteReader extends AFn{
 		return false;
 	}
 
-	// transform each element of seq as if seq was already (syntax) quoted
-	// sqLiftQuoted(('a 1 :b)) => (a 1 :b)
+	// transform each element of seq as if seq was already (syntax) quoted.
+	// ~ and ~@ not allowed.
+	// e.g., sqLiftQuoted(('a 1 :b)) => (a 1 :b)
 	private static ISeq sqLiftQuoted(ISeq seq) {
 		PersistentVector ret = PersistentVector.EMPTY;
 		for(; seq != null; seq = seq.next())
@@ -1301,6 +1303,8 @@ public static class SyntaxQuoteReader extends AFn{
 		return ret.seq();
 	}
 
+	// treat ~@ as if it was ~. assumes caller has analyzed ~@ positions beforehand.
+	// useful for generating list* calls if you know only the last elem is ~@.
 	private static ISeq sqExpandFlat(ISeq seq) {
 		PersistentVector ret = PersistentVector.EMPTY;
 		for(; seq != null; seq = seq.next())
@@ -1315,6 +1319,9 @@ public static class SyntaxQuoteReader extends AFn{
 		return ret.seq();
 	}
 
+	// transform each element of seq as if seq was already (syntax) quoted.
+	// ~ and ~@ allowed.
+	// sqExpandList((~@a b ~@c ~d)) => (a `[b] c [d])
 	private static ISeq sqExpandList(ISeq seq) {
 		PersistentVector ret = PersistentVector.EMPTY;
 		for(; seq != null; seq = seq.next())

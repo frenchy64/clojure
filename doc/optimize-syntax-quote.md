@@ -9,8 +9,8 @@
 ## Benefits
 
 - syntax quotes compile to fewer bytecode instructions
-  - (premise: many defmacro's / macro helpers use syntax quote)
   - faster macroexpand-1
+    - assumption: many defmacro's / macro helpers use syntax quote
     - more computation done ahead-of-time
       - e.g., [] is immediate instead of (apply vector (seq (concat)))
     - improved code loading time
@@ -20,15 +20,15 @@
     - better utilize existing code paths in compiler
       - e.g., more opportunities to use IPersistentMap/.mapUniqueKeys rather than IPersistentMap/.map
     - avoid redundant code paths
-      - e.g., (syntax-quote nil) => (quote nil) => analyze => analyzeSeq => ConstantExpr/.parse => NIL_EXPR
+      - e.g., (syntax-quote nil) => (quote nil) => analyze => analyzeSeq => ConstantExpr/.parse => NilExpr
               vs
-              (syntax-quote nil) => nil => analyze => NIL_EXPR
-      - e.g., (syntax-quote []) => (apply vector (seq (concat))) => analyze => analyzeSeq => ....=>....
+              (syntax-quote nil) => nil => analyze => NilExpr
+      - e.g., (syntax-quote []) => (apply vector (seq (concat))) => analyze => analyzeSeq => ... => InvokeExpr
               vs
-              (syntax-quote []) => [] => analyze => EmptyExpr([])
-      - e.g., (syntax-quote [{:keys [a]}]) => (apply vector (seq (concat [(apply hash-map ...)]))) => analyzeSeq => macroexpand-1 => ... => InvokeExpr
+              (syntax-quote []) => [] => analyze => EmptyExpr
+      - e.g., (syntax-quote [{:keys [a]}]) => (apply vector (seq (concat [(apply hash-map ...)]))) => analyzeSeq => macroexpand-1 => ... => InvokeExpr<VarExpr,InvokeExpr>
               vs
-              (syntax-quote [{:keys [a]}]) => [{:keys ['a]]] => ... => VectorExpr<MapExpr>
+              (syntax-quote [{:keys [a]}]) => [{:keys ['a]]] => analyze => ... => VectorExpr<MapExpr>
   - faster loading of macros
     - fewer instructions to compile
     - tho maybe more work compiling constants
@@ -43,4 +43,4 @@
 - increased minimum memory requirements
   - need to store these larger constants somewhere rather than compute them as needed
 - it may indeed be much more effective to implement in compiler
-- increased compilation time via elaborate static analysis
+- increased compilation time via (excessively) elaborate static analysis

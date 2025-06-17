@@ -1105,7 +1105,7 @@ public static class SyntaxQuoteReader extends AFn{
 				// `{k v} => {k v}
 				else if(seq.count() == 2)
 					ret = PersistentArrayMap.createAsIfByAssoc(RT.toArray(sqExpandFlat(seq)));
-					//TODO flatten constants
+					//TODO if keys are all constants we can expand to {k v ...}, see `map constant keys` test
 				// `{k v ...} => (hash-map k v ...)
 				else
 					ret = RT.cons(HASHMAP, sqExpandFlat(seq));
@@ -1141,12 +1141,17 @@ public static class SyntaxQuoteReader extends AFn{
 				{
 				ISeq seq = ((IPersistentSet) form).seq();
 				// `#{~@a b ~@c} => (apply hash-set (concat a [b] c))
+				// optimization ideas:
+				// - use (clojure.core/set ..) instead of (apply hash-set ..)
+				// - remove redundant (concat a) => a
+				// - if has just trailing splice, use fixed args of hash-set
+				//   - `#{~@a ~b c} => (apply hash-set b `c a)
 				if(hasSplice(seq))
 					ret = RT.list(APPLY, HASHSET, RT.cons(CONCAT, sqExpandList(seq)));
 				// `#{} => #{}
 				else if(seq == null)
 					ret = PersistentHashSet.EMPTY;
-				// `#{a b c} => (hash-set a b c)
+				// `#{a ~b c} => (hash-set `a b `c)
 				else
 					ret = RT.cons(HASHSET, sqExpandFlat(seq));
 				}
@@ -1158,13 +1163,13 @@ public static class SyntaxQuoteReader extends AFn{
 					ret = PersistentList.EMPTY;
 				//TODO use list* leading args until first splice.
 				// e.g., `(deftype* ~1 ~2 ~3 ~4 :implements ~5 ~@v1 ~@v2)
-				//       => (list* 'deftype* 1 2 3 4 :implements 5 (concat v1 v2))
+				//       => (list* `deftype* 1 2 3 4 `:implements 5 (concat v1 v2))
 				else if(hasSplice(seq))
 					{
-					// `(a b ~@c) => (list* a b c)
+					// `(~a b ~@c) => (list* a `b c)
 					if(hasOnlyTrailingSplice(seq))
 						ret = RT.cons(LIST_STAR, sqExpandFlat(seq));
-					// `(~@a b ~@c) => (list* (concat a [b] c))
+					// `(~@a b ~@c) => (list* (concat a [`b] c))
 					// using list* instead of seq here to handle (~@a ~@b) when a=() b=().
 					// since (seq (concat () ())) => nil.
 					else
@@ -1176,7 +1181,7 @@ public static class SyntaxQuoteReader extends AFn{
 					// `(:a 1 'b) => '(:a 1 b)
 					if(isAllQuoteLiftable(flat))
 						ret = RT.list(QUOTE, sqLiftQuoted(flat));
-					// `(a b c) => (list a b c)
+					// `(a ~b c) => (list `a b `c)
 					else
 						ret = RT.cons(LIST, flat);
 					}
@@ -1188,7 +1193,7 @@ public static class SyntaxQuoteReader extends AFn{
 		        || form instanceof Number
 		        || form instanceof Character
 		        || form instanceof String
-		        // `nil => nil
+		        // `nil => nil, before (quote nil)
 		        || form == null)
 			ret = form;
 		else

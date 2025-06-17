@@ -22,6 +22,7 @@
                                 read-instant-calendar
                                 read-instant-timestamp]])
   (:require clojure.walk
+            clojure.test-helper ;; thrown-with-cause-msg?
             [clojure.edn :as edn]
             [clojure.test.generative :refer (defspec)]
             [clojure.test-clojure.generators :as cgen]
@@ -800,3 +801,65 @@
   (eval (-> "^{:line 42 :column 99} (defn explicit-line-numbering [])" str->lnpr read))
   (is (= {:line 42 :column 99}
          (-> 'explicit-line-numbering resolve meta (select-keys [:line :column])))))
+
+(deftest expansion-tests
+  (binding [*ns* (the-ns 'clojure.test-clojure.reader)]
+    (is (= [] '`[]))
+    (is (= '[1 a] '`[1 ~a]))
+    (is (= '[local-variable] '`[~local-variable]))
+    (is (= '(clojure.core/vec local-variable) '`[~@local-variable]))
+    ;; could also introduce clojure.core/set, see note in clojure.lang.LispReader/syntaxQuote
+    (is (= #{} '`#{}))
+    (is (= ;#{a} ;;FIXME
+           '(clojure.core/hash-set a)
+           '`#{~a}))
+    (is (= ;'(clojure.core/apply clojure.core/hash-set a) ;;FIXME
+           '(clojure.core/apply clojure.core/hash-set (clojure.core/concat a))
+           '`#{~@a}))
+    (is (contains? #{'(clojure.core/hash-set a b)
+                     '(clojure.core/hash-set b a)}
+                   '`#{~a ~b}))
+    (is (contains?
+          #{'(clojure.core/apply clojure.core/hash-set (clojure.core/concat a b))
+            '(clojure.core/apply clojure.core/hash-set (clojure.core/concat b a))}
+          '`#{~@a ~@b}))
+    (is (= () '`()))
+    (is (= '(clojure.core/list 1 local-variable) '`(1 ~local-variable)))
+    (is (= ;'(clojure.core/list* 1 (clojure.core/concat local-variable [2])) ;;FIXME
+           '(clojure.core/list* (clojure.core/concat [1] local-variable [2]))
+           '`(1 ~@local-variable 2)))
+    (is (= '(clojure.core/list* 1 local-variable) '`(1 ~@local-variable)))
+    (is (= '(clojure.core/list* local-variable) '`(~@local-variable)))
+    (is (= {} '`{}))
+    (is (= '{local-variable1 local-variable2} '`{~local-variable1 ~local-variable2}))
+    (testing "map constant keys"
+      ; FIXME if all keys are constant, should expand to a map literal
+      ; here, '{:a local-variable2 :b local-variable4}
+      (is (contains? 
+             #{'(clojure.core/hash-map :a local-variable2 :b local-variable4)
+               '(clojure.core/hash-map :b local-variable4 :a local-variable2)}
+             '`{:a ~local-variable2 :b ~local-variable4})))
+    (is (= '(clojure.core/hash-map :a local-variable2 'clojure.test-clojure.reader/a local-variable4)
+           '`{:a ~local-variable2 a ~local-variable4}))
+    (is (= '(clojure.core/hash-map local-variable1 local-variable2 local-variable3 local-variable4)
+           '`{~local-variable1 ~local-variable2 ~local-variable3 ~local-variable4}))
+    (is (= '(clojure.core/apply clojure.core/hash-map (clojure.core/concat local-variable1 local-variable2))
+           '`{~@local-variable1 ~@local-variable2}))
+    (is (= 42 '`42))
+    (is (= :a '`:a))
+    (is (= \a '`\a))
+    (is (= "a" '`"a"))
+    (is (nil? '`nil))
+    (is (= "(quote #\"a\")"
+           ;"#\"a\"" ;;FIXME
+           (pr-str '`#"a")))
+    ;;FIXME is this right?
+    (is (= "(quote (quote #\"a\"))" (pr-str '`'#"a")))
+    ;; demonstrates liftQuoted strategy. otherwise would be:
+    ;;   (clojure.core/list 'clojure.core/let [foo 42] (clojure.core/list 'clojure.core/+ 'clojure.test-clojure.reader/foo 'clojure.test-clojure.reader/foo))
+    ;; notice (list '+ 'foo 'foo) is optimized to '(+ foo foo)
+    (is (= '(clojure.core/list 'clojure.core/let [foo 42] '(clojure.core/+ clojure.test-clojure.reader/foo clojure.test-clojure.reader/foo))
+           '`(let [~foo 42] (+ foo foo))))
+    (is (= '(quote (nil)) '`(nil)))
+    (is (= '(quote foo) '`~'foo))
+    (is (= '(quote (foo foo)) (do '`(~'foo ~'foo))))))

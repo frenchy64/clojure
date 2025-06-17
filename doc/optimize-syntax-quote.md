@@ -37,3 +37,4 @@
 - increased minimum memory requirements
   - need to store these larger constants somewhere rather than compute them as needed
 - it may indeed be much more effective to implement in compiler
+- increased compilation time via elaborate static analysis

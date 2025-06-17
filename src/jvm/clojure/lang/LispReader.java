@@ -1161,9 +1161,6 @@ public static class SyntaxQuoteReader extends AFn{
 				// `() => ()
 				if(seq == null)
 					ret = PersistentList.EMPTY;
-				//TODO use list* leading args until first splice.
-				// e.g., `(deftype* ~1 ~2 ~3 ~4 :implements ~5 ~@v1 ~@v2)
-				//       => (list* `deftype* 1 2 3 4 `:implements 5 (concat v1 v2))
 				else if(hasSplice(seq))
 					{
 					// `(~a b ~@c) => (list* a `b c)
@@ -1172,6 +1169,10 @@ public static class SyntaxQuoteReader extends AFn{
 					// `(~@a b ~@c) => (list* (concat a [`b] c))
 					// using list* instead of seq here to handle (~@a ~@b) when a=() b=().
 					// since (seq (concat () ())) => nil.
+					//TODO use list* leading args until first splice.
+					// e.g., `(deftype* ~1 ~2 ~3 ~4 :implements ~5 ~@v1 ~@v2)
+					//       => (list* `deftype* 1 2 3 4 `:implements 5 (concat v1 v2))
+					// see "list* leading args" test
 					else
 						ret = RT.list(LIST_STAR, RT.cons(CONCAT, sqExpandList(seq)));
 					}

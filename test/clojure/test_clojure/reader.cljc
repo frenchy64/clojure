@@ -808,7 +808,7 @@
     (is (= '[1 a] '`[1 ~a]))
     (is (= '[local-variable] '`[~local-variable]))
     (is (= '(clojure.core/vec local-variable) '`[~@local-variable]))
-    ;; could also introduce clojure.core/set, see note in clojure.lang.LispReader/syntaxQuote
+    ;; TODO could also introduce clojure.core/set as a runtime dep, see note in clojure.lang.LispReader/syntaxQuote
     (is (= #{} '`#{}))
     (is (= ;#{a} ;;FIXME
            '(clojure.core/hash-set a)
@@ -825,9 +825,10 @@
           '`#{~@a ~@b}))
     (is (= () '`()))
     (is (= '(clojure.core/list 1 local-variable) '`(1 ~local-variable)))
-    (is (= ;'(clojure.core/list* 1 (clojure.core/concat local-variable [2])) ;;FIXME
-           '(clojure.core/list* (clojure.core/concat [1] local-variable [2]))
-           '`(1 ~@local-variable 2)))
+    (testing "list* leading args"
+      (is (= ;'(clojure.core/list* 1 (clojure.core/concat local-variable [2])) ;;FIXME
+             '(clojure.core/list* (clojure.core/concat [1] local-variable [2]))
+             '`(1 ~@local-variable 2))))
     (is (= '(clojure.core/list* 1 local-variable) '`(1 ~@local-variable)))
     (is (= '(clojure.core/list* local-variable) '`(~@local-variable)))
     (is (= {} '`{}))
@@ -839,8 +840,11 @@
              #{'(clojure.core/hash-map :a local-variable2 :b local-variable4)
                '(clojure.core/hash-map :b local-variable4 :a local-variable2)}
              '`{:a ~local-variable2 :b ~local-variable4})))
-    (is (= '(clojure.core/hash-map :a local-variable2 'clojure.test-clojure.reader/a local-variable4)
-           '`{:a ~local-variable2 a ~local-variable4}))
+    ;; TODO 
+    (is (contains?
+          #{'(clojure.core/hash-map :a local-variable2 'clojure.test-clojure.reader/a local-variable4)
+            '(clojure.core/hash-map 'clojure.test-clojure.reader/a local-variable4 :a local-variable2)}
+          '`{:a ~local-variable2 a ~local-variable4}))
     (is (= '(clojure.core/hash-map local-variable1 local-variable2 local-variable3 local-variable4)
            '`{~local-variable1 ~local-variable2 ~local-variable3 ~local-variable4}))
     (is (= '(clojure.core/apply clojure.core/hash-map (clojure.core/concat local-variable1 local-variable2))

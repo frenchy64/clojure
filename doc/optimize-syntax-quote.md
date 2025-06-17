@@ -1,5 +1,23 @@
 # Optimizing syntax quote
 
+Syntax quote takes and returns code.
+
+- expanding a syntax quote takes computation time and space
+  - e.g., (LispReader/syntaxQuote []) => (list 'apply 'vector (cons 'concat (seq [])))
+- The returned code must be compiled at compilation time.
+  - analyzed, expanded, emitted
+  - e.g., (syntax-quote []) => (apply vector (seq (concat))) => (resolve 'apply) / (resolve 'seq) ... => InvokeExpr/.emit => writeClassFile
+- The code is executed at runtime.
+  - e.g., (syntax-quote []) => (eval '(apply vector (seq (concat)))) => []
+
+The output of LispReader/syntaxQuote has an influence over the cost of later stages.
+As long as returns code that evaluates to the correct result, this algorithm can be
+improved to return code that is faster to compile and run.
+
+For example when considering (syntax-quote []), [] is equivalent to (apply vector (seq (concat))) (1.12's output),
+but [] is faster to both compile and run. Returning [] from LispReader/syntaxQuote also avoids allocations
+by returning PersistentVector/EMPTY, and is cheap to compute via (zero? (count v)).
+
 - basically constant folding
   - Q: doesn't that belong in the compiler?
   - A: it may be faster overall to optimize the output of syntax quote.

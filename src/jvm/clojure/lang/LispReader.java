@@ -1043,30 +1043,30 @@ public static class SyntaxQuoteReader extends AFn{
 				{
 				// Simply quote method names.
 				}
-			else if(resolver != null)
-				{
-					Symbol nsym = null;
-					if(sym.ns != null){
-						Symbol alias = Symbol.intern(null, sym.ns);
-						nsym = resolver.resolveClass(alias);
-						if(nsym == null)
-						    nsym = resolver.resolveAlias(alias);
-						}
-					if(nsym != null){
-						// Classname/foo -> package.qualified.Classname/foo
-						sym = Symbol.intern(nsym.name, sym.name);
-						}
-					else if(sym.ns == null){
-						Symbol rsym = resolver.resolveClass(sym);
-						if(rsym == null)
-							rsym = resolver.resolveVar(sym);
-						if(rsym != null)
-							sym = rsym;
-						else
-							sym = Symbol.intern(resolver.currentNS().name,sym.name);
-					}
-					//leave alone if qualified
-					}
+            else if(resolver != null)
+                {
+                Symbol nsym = null;
+                if(sym.ns != null){
+                    Symbol alias = Symbol.intern(null, sym.ns);
+                    nsym = resolver.resolveClass(alias);
+                    if(nsym == null)
+                        nsym = resolver.resolveAlias(alias);
+                    }
+                if(nsym != null){
+                    // Classname/foo -> package.qualified.Classname/foo
+                    sym = Symbol.intern(nsym.name, sym.name);
+                    }
+                else if(sym.ns == null){
+                    Symbol rsym = resolver.resolveClass(sym);
+                    if(rsym == null)
+                        rsym = resolver.resolveVar(sym);
+                    if(rsym != null)
+                        sym = rsym;
+                    else
+                        sym = Symbol.intern(resolver.currentNS().name,sym.name);
+                }
+                //leave alone if qualified
+                }
 			else
 				{
 				Object maybeClass = null;

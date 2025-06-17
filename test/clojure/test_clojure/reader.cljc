@@ -840,13 +840,15 @@
              #{'(clojure.core/hash-map :a local-variable2 :b local-variable4)
                '(clojure.core/hash-map :b local-variable4 :a local-variable2)}
              '`{:a ~local-variable2 :b ~local-variable4})))
-    ;; TODO 
-    (is (contains?
-          #{'(clojure.core/hash-map :a local-variable2 'clojure.test-clojure.reader/a local-variable4)
-            '(clojure.core/hash-map 'clojure.test-clojure.reader/a local-variable4 :a local-variable2)}
-          '`{:a ~local-variable2 a ~local-variable4}))
-    (is (= '(clojure.core/hash-map local-variable1 local-variable2 local-variable3 local-variable4)
-           '`{~local-variable1 ~local-variable2 ~local-variable3 ~local-variable4}))
+    ;; TODO should these cases expand to map literals? which cases are we trying to avoid?
+    ;; consider expressions like (let [a :a] `{:a 1 ~a 2})
+    (testing "map almost constant keys"
+      (is (contains?
+            #{'(clojure.core/hash-map :a local-variable2 'clojure.test-clojure.reader/a local-variable4)
+              '(clojure.core/hash-map 'clojure.test-clojure.reader/a local-variable4 :a local-variable2)}
+            '`{:a ~local-variable2 a ~local-variable4}))
+      (is (= '(clojure.core/hash-map local-variable1 local-variable2 local-variable3 local-variable4)
+             '`{~local-variable1 ~local-variable2 ~local-variable3 ~local-variable4})))
     (is (= '(clojure.core/apply clojure.core/hash-map (clojure.core/concat local-variable1 local-variable2))
            '`{~@local-variable1 ~@local-variable2}))
     (is (= 42 '`42))

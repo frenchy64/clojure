@@ -1,28 +1,72 @@
 # Optimizing syntax quote
 
-Syntax quote takes and returns code.
+Syntax quote is a reader macro, taking and returning code. It is primarily used
+to construct syntax to return from other macros. A reader macro is expanded
+once at read time, and the resulting expansion is then evaluated as code at runtime.
 
 - expanding a syntax quote takes computation time and space
+  - must construct lists, symbols, vectors
   - e.g., (LispReader/syntaxQuote []) => (list 'apply 'vector (cons 'concat (seq [])))
 - The returned code must be compiled at compilation time.
-  - analyzed, expanded, emitted
+  - analyzed (expanded, resolved), emitted
   - e.g., (syntax-quote []) => (apply vector (seq (concat))) => (resolve 'apply) / (resolve 'seq) ... => InvokeExpr/.emit => writeClassFile
-- The code is executed at runtime.
+- The compiled code is executed at runtime.
   - e.g., (syntax-quote []) => (eval '(apply vector (seq (concat)))) => []
 
 The output of LispReader/syntaxQuote has an influence over the cost of later stages.
-As long as returns code that evaluates to the correct result, this algorithm can be
-improved to return code that is faster to compile and run.
+Inefficiencies in LispReader/syntaxQuote's output could contribute to higher development costs over time.
+- a tools.namespace refresh usually triggers macroexpansions, which almost always evaluate syntax-quotes.
+  - a single developer could refresh hundreds of times a day triggering thousands of syntax-quote evaluations, multiplied by the number of developers
+  - end-to-end performance improvement via syntax-quote optimizations are worth investigating
 
 For example when considering (syntax-quote []), [] is equivalent to (apply vector (seq (concat))) (1.12's output),
 but [] is faster to both compile and run. Returning [] from LispReader/syntaxQuote also avoids allocations
 by returning PersistentVector/EMPTY, and is cheap to compute via (zero? (count v)).
 
-- basically constant folding
-  - Q: doesn't that belong in the compiler?
-  - A: it may be faster overall to optimize the output of syntax quote.
-       e.g., there's less code to retraverse/optimize if you can directly
-             generate more efficient code with little overhead.
+Each optimizations in LispReader/syntaxQuote also compound positively, similar to adding cases to a constant-folding compiler pass.
+
+For example, consider the constant expression:
+```clojure
+`(let [{b# :c :keys [~'a]} foo] (+ b# (identity ~'a)))
+```
+
+By combining several optimizations around constant folding lists, vectors, maps, and symbols, we can compile this to a single constant:
+
+```
+'(clojure.core/let [{b__35__auto__ :c, :keys [a]} user/foo] (clojure.core/+ b__35__auto__ (clojure.core/identity a)))
+```
+
+Clojure 1.12 produces a large amount of equivalent code in comparison.
+
+```
+user=> '`(let [{b# :c :keys [~'a]} foo] (+ b# (identity ~'a)))
+(clojure.core/seq (clojure.core/concat (clojure.core/list (quote clojure.core/let)) (clojure.core/list (clojure.core/apply clojure.core/vector (clojure.core/seq (clojure.core/concat (clojure.core/list (clojure.core/apply clojure.core/hash-map (clojure.core/seq (clojure.core/concat (clojure.core/list (quote b__175__auto__)) (clojure.core/list :c) (clojure.core/list :keys) (clojure.core/list (clojure.core/apply clojure.core/vector (clojure.core/seq (clojure.core/concat (clojure.core/list (quote a)))))))))) (clojure.core/list (quote user/foo)))))) (clojure.core/list (clojure.core/seq (clojure.core/concat (clojure.core/list (quote clojure.core/+)) (clojure.core/list (quote b__175__auto__)) (clojure.core/list (clojure.core/seq (clojure.core/concat (clojure.core/list (quote clojure.core/identity)) (clojure.core/list (quote a))))))))))
+```
+
+This highlights why the reader might overall be a better place than the compiler to optimize of the results of syntax-quote,
+even though it doesn't really belong there: if syntax-quote were left as-is, the compiler first has to analyze this code, only to then optimize it away.
+The output of syntax-quote in 1.12 grows linearly with respect to its input, but the constant factors can be larger than necessary.
+If syntax-quote can (somewhat) directly return such constants, there is less code to analyze.
+
+Some comparisons:
+
+```
+# clojure 1.12
+user=> '`[[[]]]
+(clojure.core/apply clojure.core/vector (clojure.core/seq (clojure.core/concat (clojure.core/list (clojure.core/apply clojure.core/vector (clojure.core/seq (clojure.core/concat (clojure.core/list (clojure.core/apply clojure.core/vector (clojure.core/seq (clojure.core/concat)))))))))))
+
+# optimized
+clojure.test-clojure.reader=> '`[[[]]]
+(quote [[[]]])
+
+# clojure 1.12
+user=> '`[1 2 3 4 5]
+(clojure.core/apply clojure.core/vector (clojure.core/seq (clojure.core/concat (clojure.core/list 1) (clojure.core/list 2) (clojure.core/list 3) (clojure.core/list 4) (clojure.core/list 5))))
+
+# optimized
+clojure.test-clojure.reader=> '`[1 2 3 4 5]
+(quote [1 2 3 4 5])
+```
 
 ## Benefits
 

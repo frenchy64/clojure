@@ -868,4 +868,9 @@
            '`(let [~foo 42] (+ foo foo))))
     (is (= '(quote (nil)) '`(nil)))
     (is (= '(quote foo) '`~'foo))
-    (is (= '(quote (foo foo)) (do '`(~'foo ~'foo))))))
+    (is (= '(quote (foo foo)) (do '`(~'foo ~'foo))))
+    ;;TODO use gensym
+    (is (= ;;FIXME '(clojure.core/let [{b__35__auto__ :c, :keys [a]} user/foo] (clojure.core/+ b__35__auto__ (clojure.core/identity a)))
+           ;; requires hash map optimization for known keys
+           '(clojure.core/list 'clojure.core/let [(clojure.core/hash-map 'b__35__auto__ :c :keys '[a]) 'clojure.test-clojure.reader/foo] '(clojure.core/+ b__35__auto__ (clojure.core/identity a)))
+           '`(let [{~'b__35__auto__ :c :keys [~'a]} foo] (+ ~'b__35__auto__ (identity ~'a)))))))

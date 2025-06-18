@@ -1102,11 +1102,11 @@ public static class SyntaxQuoteReader extends AFn{
 				// `{} => {}
 				else if(seq == null)
 					ret = PersistentArrayMap.EMPTY;
-				// `{k v} => {k v}
+				// `{k v} => {`k `v}
 				else if(seq.count() == 2)
 					ret = PersistentArrayMap.createAsIfByAssoc(RT.toArray(sqExpandFlat(seq)));
-					//TODO if keys are all constants we can expand to {k v ...}, see `map constant keys` test
 				// `{k v ...} => (hash-map k v ...)
+				//TODO if keys are all constants we can expand to {k v ...}, see `map constant keys` test
 				else
 					ret = RT.cons(HASHMAP, sqExpandFlat(seq));
 				}
@@ -1121,6 +1121,7 @@ public static class SyntaxQuoteReader extends AFn{
 					else if(hasOnlyTrailingSplice(seq))
 						ret = RT.cons(APPLY, RT.cons(VECTOR, sqExpandFlat(seq)));
 					// `[~@a b ~@c] => (vec (concat a [b] c))
+					// idea: (-> (vec a) (conj b) (into c))
 					else
 						ret = RT.list(VEC, RT.cons(CONCAT, sqExpandList(seq)));
 				else
@@ -1132,7 +1133,7 @@ public static class SyntaxQuoteReader extends AFn{
 					// `[:a 1 'b] => '[:a 1 b]
 					else if(isAllQuoteLiftable(flat))
 						ret = RT.list(QUOTE, LazilyPersistentVector.create(sqLiftQuoted(flat)));
-					// `[a b c] => [a b c]
+					// `[a ~b c] => [`a b `c]
 					else
 						ret = LazilyPersistentVector.create(flat);
 					}
@@ -1143,6 +1144,7 @@ public static class SyntaxQuoteReader extends AFn{
 				// `#{~@a b ~@c} => (apply hash-set (concat a [b] c))
 				// optimization ideas:
 				// - use (clojure.core/set ..) instead of (apply hash-set ..)
+				// - use (-> (set a) (conj b) (into c))
 				// - remove redundant (concat a) => a
 				// - if has just trailing splice, use fixed args of hash-set
 				//   - `#{~@a ~b c} => (apply hash-set b `c a)
@@ -1152,6 +1154,7 @@ public static class SyntaxQuoteReader extends AFn{
 				else if(seq == null)
 					ret = PersistentHashSet.EMPTY;
 				// `#{a ~b c} => (hash-set `a b `c)
+				// TODO if distinct, compile to set literal: `#{a ~b c} => '#{a b c}
 				else
 					ret = RT.cons(HASHSET, sqExpandFlat(seq));
 				}

@@ -1,24 +1,24 @@
 #!/bin/bash
 set -euo pipefail
 
-# This script compares the bytecode of the compiled if-let macro definition
+# This script compares the bytecode of the compiled if-not macro definition
 # between baseline Clojure 1.12.3 and the optimized version.
 #
 # What it verifies: Macro definition bytecode changes (Effect #1)
 #
 # Dependencies: curl, sha256sum, strip-nondeterminism, javap, unzip, diff
 # 
-# Expected output: Bytecode differences in core$if_let class
+# Expected output: Bytecode differences in core$if_not class
 
 BASELINE_URL="https://repo1.maven.org/maven2/org/clojure/clojure/1.12.3/clojure-1.12.3.jar"
 # Verified by: curl -sL $BASELINE_URL | sha256sum
 BASELINE_SHA256="cb2a1a3db1c2cd76ef4fa4a545d5a65f10b1b48b7f7672f0a109f5476f057166"
 
-WORK_DIR="/tmp/if-let-bytecode-compare-$$"
+WORK_DIR="/tmp/if-not-bytecode-compare-$$"
 mkdir -p "$WORK_DIR"
 cd "$WORK_DIR"
 
-echo "=== Comparing if-let Macro Bytecode ==="
+echo "=== Comparing if-not Macro Bytecode ==="
 echo ""
 echo "Working directory: $WORK_DIR"
 echo ""
@@ -76,32 +76,32 @@ cd baseline && unzip -q ../clojure-baseline.jar && cd ..
 cd optimized && unzip -q ../clojure-optimized.jar && cd ..
 echo ""
 
-# Find the if-let class file
-IF_LET_CLASS="clojure/core\$if_let.class"
+# Find the if-not class file
+IF_NOT_CLASS="clojure/core\$if_not.class"
 
-if [ ! -f "baseline/$IF_LET_CLASS" ]; then
-    echo "ERROR: Could not find $IF_LET_CLASS in baseline JAR"
+if [ ! -f "baseline/$IF_NOT_CLASS" ]; then
+    echo "ERROR: Could not find $IF_NOT_CLASS in baseline JAR"
     exit 1
 fi
 
-if [ ! -f "optimized/$IF_LET_CLASS" ]; then
-    echo "ERROR: Could not find $IF_LET_CLASS in optimized JAR"
+if [ ! -f "optimized/$IF_NOT_CLASS" ]; then
+    echo "ERROR: Could not find $IF_NOT_CLASS in optimized JAR"
     exit 1
 fi
 
 # Compare the class files directly
 echo "=== Direct Binary Comparison ==="
-if cmp -s "baseline/$IF_LET_CLASS" "optimized/$IF_LET_CLASS"; then
+if cmp -s "baseline/$IF_NOT_CLASS" "optimized/$IF_NOT_CLASS"; then
     echo "⚠️  Class files are IDENTICAL (no bytecode changes detected)"
-    echo "    This might indicate the optimization doesn't affect if-let,"
+    echo "    This might indicate the optimization doesn't affect if-not,"
     echo "    or the comparison method needs refinement."
 else
     echo "✓ Class files are DIFFERENT"
     echo ""
     
     # Show file sizes
-    BASELINE_SIZE=$(stat -f%z "baseline/$IF_LET_CLASS" 2>/dev/null || stat -c%s "baseline/$IF_LET_CLASS")
-    OPTIMIZED_SIZE=$(stat -f%z "optimized/$IF_LET_CLASS" 2>/dev/null || stat -c%s "optimized/$IF_LET_CLASS")
+    BASELINE_SIZE=$(stat -f%z "baseline/$IF_NOT_CLASS" 2>/dev/null || stat -c%s "baseline/$IF_NOT_CLASS")
+    OPTIMIZED_SIZE=$(stat -f%z "optimized/$IF_NOT_CLASS" 2>/dev/null || stat -c%s "optimized/$IF_NOT_CLASS")
     SIZE_DIFF=$((OPTIMIZED_SIZE - BASELINE_SIZE))
     
     echo "  Baseline size:  $BASELINE_SIZE bytes"
@@ -112,15 +112,15 @@ echo ""
 
 # Generate readable bytecode with javap
 echo "=== Generating Bytecode Disassembly ==="
-javap -c -p -v "baseline/$IF_LET_CLASS" > if-let-baseline.javap 2>&1
-javap -c -p -v "optimized/$IF_LET_CLASS" > if-let-optimized.javap 2>&1
-echo "✓ Generated baseline bytecode: if-let-baseline.javap"
-echo "✓ Generated optimized bytecode: if-let-optimized.javap"
+javap -c -p -v "baseline/$IF_NOT_CLASS" > if-not-baseline.javap 2>&1
+javap -c -p -v "optimized/$IF_NOT_CLASS" > if-not-optimized.javap 2>&1
+echo "✓ Generated baseline bytecode: if-not-baseline.javap"
+echo "✓ Generated optimized bytecode: if-not-optimized.javap"
 echo ""
 
 # Compute checksums of javap output (for reproducibility)
-BASELINE_JAVAP_SHA256=$(sha256sum if-let-baseline.javap | awk '{print $1}')
-OPTIMIZED_JAVAP_SHA256=$(sha256sum if-let-optimized.javap | awk '{print $1}')
+BASELINE_JAVAP_SHA256=$(sha256sum if-not-baseline.javap | awk '{print $1}')
+OPTIMIZED_JAVAP_SHA256=$(sha256sum if-not-optimized.javap | awk '{print $1}')
 echo "  Baseline javap SHA256:  $BASELINE_JAVAP_SHA256"
 echo "  Optimized javap SHA256: $OPTIMIZED_JAVAP_SHA256"
 echo ""
@@ -129,16 +129,16 @@ echo ""
 echo "=== Bytecode Differences ==="
 echo ""
 
-if diff -u if-let-baseline.javap if-let-optimized.javap > if-let.diff; then
+if diff -u if-not-baseline.javap if-not-optimized.javap > if-not.diff; then
     echo "⚠️  No differences found in javap output"
-    echo "    (This might mean optimization doesn't affect if-let,"
+    echo "    (This might mean optimization doesn't affect if-not,"
     echo "     or javap output is too high-level to show the change)"
 else
     echo "✓ Found differences (first 100 lines):"
     echo ""
-    head -100 if-let.diff
+    head -100 if-not.diff
     echo ""
-    echo "Full diff saved to: if-let.diff"
+    echo "Full diff saved to: if-not.diff"
 fi
 echo ""
 
@@ -166,7 +166,7 @@ echo "4. Future runs will verify reproducibility"
 echo ""
 
 echo "All artifacts saved to: $WORK_DIR"
-echo "  - if-let-baseline.javap  : Baseline bytecode"
-echo "  - if-let-optimized.javap : Optimized bytecode"
-echo "  - if-let.diff            : Differences"
+echo "  - if-not-baseline.javap  : Baseline bytecode"
+echo "  - if-not-optimized.javap : Optimized bytecode"
+echo "  - if-not.diff            : Differences"
 echo ""

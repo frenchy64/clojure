@@ -1,7 +1,7 @@
 #!/bin/bash
 set -euo pipefail
 
-# This script measures the performance of if-let macro expansion
+# This script measures the performance of if-not macro expansion
 # between baseline Clojure 1.12.3 and the optimized version.
 #
 # What it verifies: Macro expansion performance (Effect #2)
@@ -21,11 +21,11 @@ SPEC_SHA256="94cd99b6ea639641f37af4860a643b6ed399ee5a8be5d717cff0b663c8d75077"
 CORE_SPECS_URL="https://repo1.maven.org/maven2/org/clojure/core.specs.alpha/0.4.74/core.specs.alpha-0.4.74.jar"
 CORE_SPECS_SHA256="eb73ac08cf49ba840c88ba67beef11336ca554333d9408808d78946e0feb9ddb"
 
-WORK_DIR="/tmp/if-let-expansion-perf-$$"
+WORK_DIR="/tmp/if-not-expansion-perf-$$"
 mkdir -p "$WORK_DIR"
 cd "$WORK_DIR"
 
-echo "=== Measuring if-let Macro Expansion Performance ==="
+echo "=== Measuring if-not Macro Expansion Performance ==="
 echo ""
 echo "Working directory: $WORK_DIR"
 echo ""
@@ -79,16 +79,16 @@ cp core.specs.alpha.jar optimized-core.specs.alpha.jar
 OPTIMIZED_CP="clojure-optimized.jar:optimized-spec.alpha.jar:optimized-core.specs.alpha.jar"
 echo ""
 
-# Create test code that expands if-let many times (minimal, no spec requirement)
+# Create test code that expands if-not many times (minimal, no spec requirement)
 cat > test-expansion.clj <<'EOF'
 ;; Minimal test without requiring spec.alpha
 
 (defn measure-expansion-time [n]
-  "Measure time to macroexpand if-let n times"
+  "Measure time to macroexpand if-not n times"
   (let [start (System/nanoTime)]
     (dotimes [_ n]
       ;; Force macroexpansion without evaluation
-      (macroexpand-1 '(if-let [x (fn [] nil)] x)))
+      (macroexpand-1 '(if-not (fn [] nil) :then)))
     (let [end (System/nanoTime)
           elapsed-ns (- end start)]
       {:iterations n

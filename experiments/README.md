@@ -66,8 +66,8 @@ Results are available as workflow artifacts.
 **Workflow**: `.github/workflows/experiment-01-nil.yml`
 
 **Documentation**:
-- **Detailed Analysis**: `IF_LET_NIL_OPTIMIZATION_ANALYSIS.md` - Focused analysis using `if-let` as representative example
-- **Verification Scripts**: `if-let-nil-scripts/` - Three reproducible scripts demonstrating:
+- **Detailed Analysis**: `IF_NOT_NIL_OPTIMIZATION_ANALYSIS.adoc` - Focused analysis using `if-not` as a minimal example
+- **Verification Scripts**: `if-not-nil-scripts/` - Three reproducible scripts demonstrating:
   1. Macro definition bytecode changes
   2. Macro expansion performance impact
   3. Semantic equivalence verification

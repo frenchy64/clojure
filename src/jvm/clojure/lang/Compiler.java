@@ -211,13 +211,13 @@ static final public Var CONSTANTS = Var.create().setDynamic();
 static final public Var CONSTANT_IDS = Var.create().setDynamic();
 
 //vector<keyword>
-static final public Var KEYWORD_CALLSITES = Var.create().setDynamic();
+static final public Var KEYWORD_CALLSITES = Var.create(null).setDynamic();
 
 //vector<var>
-static final public Var PROTOCOL_CALLSITES = Var.create().setDynamic();
+static final public Var PROTOCOL_CALLSITES = Var.create(null).setDynamic();
 
 //set<var>
-static final public Var VAR_CALLSITES = Var.create().setDynamic();
+//static final public Var VAR_CALLSITES = Var.create(null).setDynamic();
 
 //keyword->constid
 static final public Var KEYWORDS = Var.create().setDynamic();
@@ -1341,6 +1341,13 @@ static class QualifiedMethodExpr implements Expr {
 		return new IllegalArgumentException("Error - param-tags " + paramTags
 				+ " insufficient to resolve "
 				+ methodDescription(c, methodName));
+	}
+
+	public static IllegalArgumentException instanceNoTargetException(QualifiedMethodExpr qmexpr) {
+		return new IllegalArgumentException(
+				"Malformed method expression, expecting (" +
+				qmexpr.c.getName() + "/." + qmexpr.methodName +
+				" target ...)");
 	}
 }
 
@@ -4148,6 +4155,12 @@ static class InvokeExpr implements Expr{
         return null;
 	}
 
+	// Callsites are only registered in a function context
+	// In KEYWORD/PROTOCOL_CALLSITES, null indicates "do not register"
+	static boolean shouldRegisterCallsites(Var callSiteVar) {
+		return callSiteVar.deref() != null;
+	}
+
 	public InvokeExpr(String source, int line, int column, Symbol tag, Expr fexpr, IPersistentVector args, boolean tailPosition) {
 		this.source = source;
 		this.fexpr = fexpr;
@@ -4160,7 +4173,7 @@ static class InvokeExpr implements Expr{
 			{
 			Var fvar = ((VarExpr)fexpr).var;
 			Var pvar =  (Var)RT.get(fvar.meta(), protocolKey);
-			if(pvar != null && PROTOCOL_CALLSITES.isBound())
+			if(pvar != null && shouldRegisterCallsites(PROTOCOL_CALLSITES))
 				{
 				this.isProtocol = true;
 				this.siteIndex = registerProtocolCallsite(((VarExpr)fexpr).var);
@@ -4382,7 +4395,7 @@ static class InvokeExpr implements Expr{
 				}
 			}
 
-		if(fexpr instanceof KeywordExpr && RT.count(form) == 2 && KEYWORD_CALLSITES.isBound())
+		if(fexpr instanceof KeywordExpr && RT.count(form) == 2 && shouldRegisterCallsites(KEYWORD_CALLSITES))
 			{
 //			fexpr = new ConstantExpr(new KeywordCallSite(((KeywordExpr)fexpr).k));
 			Expr target = analyze(context, RT.second(form));
@@ -4411,7 +4424,12 @@ static class InvokeExpr implements Expr{
 		}
 
 		if(fexpr instanceof QualifiedMethodExpr)
-			return toHostExpr((QualifiedMethodExpr)fexpr, (String) SOURCE.deref(), lineDeref(), columnDeref(), tagOf(form), tailPosition, args);
+		{
+			QualifiedMethodExpr qmexpr = (QualifiedMethodExpr)fexpr;
+			if (qmexpr.kind == QualifiedMethodExpr.MethodKind.INSTANCE && RT.count(args) == 0)
+				throw QualifiedMethodExpr.instanceNoTargetException(qmexpr);
+			return toHostExpr(qmexpr, (String) SOURCE.deref(), lineDeref(), columnDeref(), tagOf(form), tailPosition, args);
+		}
 
 //		if(args.count() > MAX_POSITIONAL_ARITY)
 //			throw new IllegalArgumentException(
@@ -4560,7 +4578,7 @@ static public class FnExpr extends ObjExpr{
 					       VARS, PersistentHashMap.EMPTY,
 					       KEYWORD_CALLSITES, PersistentVector.EMPTY,
 					       PROTOCOL_CALLSITES, PersistentVector.EMPTY,
-					       VAR_CALLSITES, emptyVarCallSites(),
+					       //VAR_CALLSITES, emptyVarCallSites(),
                                                NO_RECUR, null
 					));
 
@@ -4640,7 +4658,7 @@ static public class FnExpr extends ObjExpr{
 			fn.constants = (PersistentVector) CONSTANTS.deref();
 			fn.keywordCallsites = (IPersistentVector) KEYWORD_CALLSITES.deref();
 			fn.protocolCallsites = (IPersistentVector) PROTOCOL_CALLSITES.deref();
-			fn.varCallsites = (IPersistentSet) VAR_CALLSITES.deref();
+			//fn.varCallsites = (IPersistentSet) VAR_CALLSITES.deref();
 
 			fn.constantsID = RT.nextID();
 //			DynamicClassLoader loader = (DynamicClassLoader) LOADER.get();
@@ -4745,7 +4763,7 @@ static public class ObjExpr implements Expr{
 
 	IPersistentVector keywordCallsites;
 	IPersistentVector protocolCallsites;
-	IPersistentSet varCallsites;
+	//IPersistentSet varCallsites;
 	boolean onceOnly = false;
 
 	Object src;
@@ -5789,9 +5807,9 @@ static public class ObjExpr implements Expr{
 		return "__cached_var__" + n;
 	}
 
-	String varCallsiteName(int n){
-		return "__var__callsite__" + n;
-	}
+	//String varCallsiteName(int n){
+	//	return "__var__callsite__" + n;
+	//}
 
 	String thunkNameStatic(int n){
 		return thunkName(n) + "__";
@@ -7788,9 +7806,6 @@ private static KeywordExpr registerKeyword(Keyword keyword){
 }
 
 private static int registerKeywordCallsite(Keyword keyword){
-	if(!KEYWORD_CALLSITES.isBound())
-		throw new IllegalAccessError("KEYWORD_CALLSITES is not bound");
-
 	IPersistentVector keywordCallsites = (IPersistentVector) KEYWORD_CALLSITES.deref();
 
 	keywordCallsites = keywordCallsites.cons(keyword);
@@ -7799,9 +7814,6 @@ private static int registerKeywordCallsite(Keyword keyword){
 }
 
 private static int registerProtocolCallsite(Var v){
-	if(!PROTOCOL_CALLSITES.isBound())
-		throw new IllegalAccessError("PROTOCOL_CALLSITES is not bound");
-
 	IPersistentVector protocolCallsites = (IPersistentVector) PROTOCOL_CALLSITES.deref();
 
 	protocolCallsites = protocolCallsites.cons(v);
@@ -7809,16 +7821,16 @@ private static int registerProtocolCallsite(Var v){
 	return protocolCallsites.count()-1;
 }
 
-private static void registerVarCallsite(Var v){
-	if(!VAR_CALLSITES.isBound())
-		throw new IllegalAccessError("VAR_CALLSITES is not bound");
-
-	IPersistentCollection varCallsites = (IPersistentCollection) VAR_CALLSITES.deref();
-
-	varCallsites = varCallsites.cons(v);
-	VAR_CALLSITES.set(varCallsites);
-//	return varCallsites.count()-1;
-}
+//private static void registerVarCallsite(Var v){
+//	if(!VAR_CALLSITES.isBound())
+//		throw new IllegalAccessError("VAR_CALLSITES is not bound");
+//
+//	IPersistentCollection varCallsites = (IPersistentCollection) VAR_CALLSITES.deref();
+//
+//	varCallsites = varCallsites.cons(v);
+//	VAR_CALLSITES.set(varCallsites);
+////	return varCallsites.count()-1;
+//}
 
 static ISeq fwdPath(PathNode p1){
     ISeq ret = null;
@@ -8336,6 +8348,9 @@ public static Object compile(Reader rdr, String sourcePath, String sourceName) t
 			       COLUMN_AFTER, pushbackReader.getColumnNumber(),
 			       CONSTANTS, PersistentVector.EMPTY,
 			       CONSTANT_IDS, new IdentityHashMap(),
+			       KEYWORD_CALLSITES, null,
+			       PROTOCOL_CALLSITES, null,
+			       //VAR_CALLSITES, null,
 			       KEYWORDS, PersistentHashMap.EMPTY,
 			       VARS, PersistentHashMap.EMPTY
 					,RT.UNCHECKED_MATH, RT.UNCHECKED_MATH.deref()
@@ -8613,7 +8628,7 @@ static public class NewInstanceExpr extends ObjExpr{
 					       VARS, PersistentHashMap.EMPTY,
 					       KEYWORD_CALLSITES, PersistentVector.EMPTY,
 					       PROTOCOL_CALLSITES, PersistentVector.EMPTY,
-					       VAR_CALLSITES, emptyVarCallSites(),
+					       //VAR_CALLSITES, emptyVarCallSites(),
                                                NO_RECUR, null));
 			if(ret.isDeftype())
 				{
@@ -8643,7 +8658,7 @@ static public class NewInstanceExpr extends ObjExpr{
 			ret.constantsID = RT.nextID();
 			ret.keywordCallsites = (IPersistentVector) KEYWORD_CALLSITES.deref();
 			ret.protocolCallsites = (IPersistentVector) PROTOCOL_CALLSITES.deref();
-			ret.varCallsites = (IPersistentSet) VAR_CALLSITES.deref();
+			//ret.varCallsites = (IPersistentSet) VAR_CALLSITES.deref();
 			}
 		finally
 			{

@@ -30,7 +30,7 @@
     <connection>scm:git:git@github.com:clojure/clojure.git</connection>
     <developerConnection>scm:git:git@github.com:clojure/clojure.git</developerConnection>
     <url>git@github.com:clojure/clojure.git</url>
-    <tag>HEAD</tag>
+    <tag>clojure-1.12.3</tag>
   </scm>
 
   <properties>

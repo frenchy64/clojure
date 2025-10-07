@@ -31,48 +31,51 @@ jobs:
     
     - name: Run Nil Optimization Experiment
       run: |
-        cd experiments
+        cd syntax-quote-optimization/nil-optimization/experiments/uberjar-comparison
         bash 01-nil-optimization.sh
     
     - name: Upload experiment results
       uses: actions/upload-artifact@v4
       with:
         name: nil-optimization-results
-        path: experiments/results/01-nil-optimization/
+        path: syntax-quote-optimization/nil-optimization/experiments/uberjar-comparison/results/01-nil-optimization/
         retention-days: 90
     
     - name: Display Results Summary
       if: always()
       run: |
-        if [ -f experiments/results/01-nil-optimization/summary.txt ]; then
+        RESULTS_DIR="syntax-quote-optimization/nil-optimization/experiments/uberjar-comparison/results/01-nil-optimization"
+        if [ -f "$RESULTS_DIR/summary.txt" ]; then
           echo "### Experiment Results" >> $GITHUB_STEP_SUMMARY
           echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
-          cat experiments/results/01-nil-optimization/summary.txt >> $GITHUB_STEP_SUMMARY
+          cat "$RESULTS_DIR/summary.txt" >> $GITHUB_STEP_SUMMARY
           echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
         fi
     
     - name: Verify Results Match Expected
       if: github.event_name == 'push'
       run: |
+        RESULTS_DIR="syntax-quote-optimization/nil-optimization/experiments/uberjar-comparison/results/01-nil-optimization"
+        
         # Verify experiment completed successfully
-        if [ ! -f experiments/results/01-nil-optimization/summary.txt ]; then
+        if [ ! -f "$RESULTS_DIR/summary.txt" ]; then
           echo "ERROR: Experiment did not generate expected results"
           exit 1
         fi
         
         # Check that both JARs were analyzed
-        if [ ! -f experiments/results/01-nil-optimization/baseline.jar ]; then
+        if [ ! -f "$RESULTS_DIR/baseline.jar" ]; then
           echo "ERROR: Baseline JAR not found"
           exit 1
         fi
         
-        if [ ! -f experiments/results/01-nil-optimization/optimized.jar ]; then
+        if [ ! -f "$RESULTS_DIR/optimized.jar" ]; then
           echo "ERROR: Optimized JAR not found"
           exit 1
         fi
         
         # Check for class differences report
-        if [ ! -f experiments/results/01-nil-optimization/class-differences.txt ]; then
+        if [ ! -f "$RESULTS_DIR/class-differences.txt" ]; then
           echo "WARNING: Class differences report not found"
         fi
         

@@ -1,0 +1,60 @@
+= Syntax-Quote Optimization Project
+:toc:
+:toclevels: 3
+
+== Overview
+
+This project contains experimental analysis and verification of piecemeal optimizations to Clojure's syntax-quote (backtick) reader. The goal is to measure and document the impact of individual optimizations before proposing them for inclusion in Clojure.
+
+== Project Structure
+
+```
+syntax-quote-optimization/
+├── README.adoc                    # This file
+├── nil-optimization/              # Subproject: nil optimization
+│   ├── nil-optimization.patch     # Git patch for the optimization
+│   ├── build-optimized-uberjar.sh # Shared build script
+│   └── experiments/               # Experiments for this optimization
+│       ├── uberjar-comparison/    # Overall JAR size impact
+│       └── if-not-macro/          # Specific macro analysis
+└── (future optimizations...)
+```
+
+== Methodology
+
+Each optimization follows a consistent workflow:
+
+1. **Isolate the change**: Create a minimal git patch that applies cleanly to a specific Clojure release commit
+2. **Build optimized JARs**: Use reproducible scripts to build both baseline and optimized versions
+3. **Measure impact**: Run experiments at different levels (whole JAR, specific macros, etc.)
+4. **Document results**: Provide analysis documents and verification scripts
+5. **Verify checksums**: All artifacts are verified with SHA256 checksums for reproducibility
+
+== Optimization Pipeline
+
+The planned sequence of optimizations, from simplest to most complex:
+
+1. ✓ **Nil optimization** - Make `nil` self-evaluating (current)
+2. Empty collection literals - Make `[]`, `{}`, `()`, `#{}` self-evaluating
+3. Constant collection lifting - Optimize collections with only constants
+4. Mixed constant/unquote collections - Optimize partially constant collections
+5. Splicing optimizations - Improve unquote-splicing handling
+6. Complex collection patterns - Advanced optimization patterns
+
+Each optimization builds understanding for the next, starting with the simplest possible change.
+
+== Contributing
+
+When adding a new optimization:
+
+1. Create a new subdirectory under `syntax-quote-optimization/`
+2. Include a git patch file that applies to a specific Clojure commit
+3. Create a `build-optimized-uberjar.sh` script for building the optimized version
+4. Add experiments in an `experiments/` subdirectory
+5. Document your findings in AsciiDoc format
+
+== See Also
+
+- link:nil-optimization/README.adoc[Nil Optimization Subproject]
+- link:nil-optimization/experiments/uberjar-comparison/01-nil-optimization.md[Uberjar Comparison]
+- link:nil-optimization/experiments/if-not-macro/IF_NOT_NIL_OPTIMIZATION_ANALYSIS.adoc[if-not Macro Analysis]

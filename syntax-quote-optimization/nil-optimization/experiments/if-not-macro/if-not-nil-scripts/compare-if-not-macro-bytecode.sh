@@ -14,6 +14,11 @@ BASELINE_URL="https://repo1.maven.org/maven2/org/clojure/clojure/1.12.3/clojure-
 # Verified by: curl -sL $BASELINE_URL | sha256sum
 BASELINE_SHA256="cb2a1a3db1c2cd76ef4fa4a545d5a65f10b1b48b7f7672f0a109f5476f057166"
 
+# Path to shared build script
+SCRIPT_DIR_PATH="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SUBPROJECT_ROOT="$(cd "$SCRIPT_DIR_PATH/../../.." && pwd)"
+BUILD_SCRIPT="$SUBPROJECT_ROOT/build-optimized-uberjar.sh"
+
 WORK_DIR="/tmp/if-not-bytecode-compare-$$"
 mkdir -p "$WORK_DIR"
 cd "$WORK_DIR"
@@ -43,18 +48,22 @@ curl -sL "$BASELINE_URL" -o clojure-baseline.jar
 verify_sha256 clojure-baseline.jar "$BASELINE_SHA256"
 echo ""
 
-# Build optimized version
+# Build optimized version using shared script
 echo "Building optimized Clojure..."
-cd -
-mvn clean package -Plocal -Dmaven.test.skip=true > /dev/null 2>&1
-OPTIMIZED_JAR=$(find target -name "clojure-*.jar" ! -name "*-slim.jar" ! -name "*-sources.jar" ! -name "*-javadoc.jar" | head -1)
-if [ ! -f "$OPTIMIZED_JAR" ]; then
-    echo "ERROR: Could not find optimized JAR in target/"
+if [ ! -x "$BUILD_SCRIPT" ]; then
+    echo "ERROR: Build script not found or not executable: $BUILD_SCRIPT"
     exit 1
 fi
-cp "$OPTIMIZED_JAR" "$WORK_DIR/clojure-optimized.jar"
-cd "$WORK_DIR"
-echo "✓ Built optimized JAR: $(basename $OPTIMIZED_JAR)"
+
+TEMP_BUILD_DIR="$WORK_DIR/temp-build"
+"$BUILD_SCRIPT" "$TEMP_BUILD_DIR"
+if [ ! -f "$TEMP_BUILD_DIR/clojure-nil-optimized.jar" ]; then
+    echo "ERROR: Built JAR not found"
+    exit 1
+fi
+cp "$TEMP_BUILD_DIR/clojure-nil-optimized.jar" "$WORK_DIR/clojure-optimized.jar"
+rm -rf "$TEMP_BUILD_DIR"
+echo "✓ Built optimized JAR"
 echo ""
 
 # Strip nondeterministic data for fair comparison

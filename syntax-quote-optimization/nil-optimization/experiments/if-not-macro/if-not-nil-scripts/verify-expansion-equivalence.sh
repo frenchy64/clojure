@@ -13,6 +13,11 @@ SPEC_SHA256="94cd99b6ea639641f37af4860a643b6ed399ee5a8be5d717cff0b663c8d75077"
 CORE_SPECS_URL="https://repo1.maven.org/maven2/org/clojure/core.specs.alpha/0.4.74/core.specs.alpha-0.4.74.jar"
 CORE_SPECS_SHA256="eb73ac08cf49ba840c88ba67beef11336ca554333d9408808d78946e0feb9ddb"
 
+# Path to shared build script
+SCRIPT_DIR_PATH="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SUBPROJECT_ROOT="$(cd "$SCRIPT_DIR_PATH/../../.." && pwd)"
+BUILD_SCRIPT="$SUBPROJECT_ROOT/build-optimized-uberjar.sh"
+
 WORK_DIR="/tmp/if-not-expansion-equiv-$$"
 mkdir -p "$WORK_DIR"
 cd "$WORK_DIR"
@@ -45,15 +50,19 @@ BASELINE_CP="clojure-baseline.jar:spec.alpha.jar:core.specs.alpha.jar"
 echo ""
 
 echo "Building optimized Clojure..."
-cd -
-mvn clean package -Plocal -Dmaven.test.skip=true > /dev/null 2>&1
-OPTIMIZED_JAR=$(find target -name "clojure-*.jar" ! -name "*-slim.jar" ! -name "*-sources.jar" ! -name "*-javadoc.jar" | head -1)
-if [ ! -f "$OPTIMIZED_JAR" ]; then
-    echo "ERROR: Could not find optimized JAR"
+if [ ! -x "$BUILD_SCRIPT" ]; then
+    echo "ERROR: Build script not found or not executable: $BUILD_SCRIPT"
     exit 1
 fi
-cp "$OPTIMIZED_JAR" "$WORK_DIR/clojure-optimized.jar"
-cd "$WORK_DIR"
+
+TEMP_BUILD_DIR="$WORK_DIR/temp-build"
+"$BUILD_SCRIPT" "$TEMP_BUILD_DIR"
+if [ ! -f "$TEMP_BUILD_DIR/clojure-nil-optimized.jar" ]; then
+    echo "ERROR: Built JAR not found"
+    exit 1
+fi
+cp "$TEMP_BUILD_DIR/clojure-nil-optimized.jar" "$WORK_DIR/clojure-optimized.jar"
+rm -rf "$TEMP_BUILD_DIR"
 echo "✓ Built optimized JAR"
 
 cp spec.alpha.jar optimized-spec.alpha.jar

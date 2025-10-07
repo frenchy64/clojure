@@ -1,0 +1,99 @@
+= Nil Optimization for Syntax-Quote
+:toc:
+:toclevels: 3
+
+== Overview
+
+This subproject contains the analysis and verification of making `nil` self-evaluating in Clojure's syntax-quote reader.
+
+== The Optimization
+
+Instead of expanding pass:[`nil] to `(quote nil)`, the optimized reader expands it to just `nil`.
+
+**Patch file:** `nil-optimization.patch`
+
+**Target commit:** `e6393a4063c42ddc0e0812f04464467764f0fd1e` (Clojure 1.12.3 release)
+
+== Building the Optimized Uberjar
+
+Use the shared build script:
+
+```bash
+./build-optimized-uberjar.sh [output_dir]
+```
+
+This script:
+1. Clones the official Clojure repository at the target commit
+2. Applies the nil-optimization.patch
+3. Builds the uberjar with Maven
+4. Strips nondeterministic data and computes SHA256
+5. Saves the result to the output directory
+
+== Experiments
+
+=== 1. Uberjar Comparison
+
+**Directory:** `experiments/uberjar-comparison/`
+
+Measures the overall impact of the nil optimization on the complete Clojure uberjar:
+- Total size reduction
+- Number of affected class files
+- Bytecode instruction differences
+
+**Run:**
+```bash
+cd experiments/uberjar-comparison/
+./01-nil-optimization.sh
+```
+
+=== 2. if-not Macro Analysis
+
+**Directory:** `experiments/if-not-macro/`
+
+Focuses on the `if-not` macro as a minimal example demonstrating all three effects of the optimization:
+
+1. **Macro definition bytecode** - Changes to `core$if_not.class`
+2. **Macro expansion performance** - Speed improvements during compilation
+3. **Semantic equivalence** - Confirmation of identical behavior
+
+**Documentation:** `experiments/if-not-macro/IF_NOT_NIL_OPTIMIZATION_ANALYSIS.adoc`
+
+**Scripts:**
+- `compare-if-not-macro-bytecode.sh` - Bytecode comparison
+- `measure-macro-expansion.sh` - Performance measurement
+- `verify-expansion-equivalence.sh` - Behavioral verification
+
+**Run:**
+```bash
+cd experiments/if-not-macro/if-not-nil-scripts/
+./verify-expansion-equivalence.sh
+```
+
+== Results Summary
+
+**Uberjar impact:**
+- Size reduction: ~1-5KB
+- Affected macros: `if-not`, `when-let`, `if-let`, `if-some`, `when-some`, and many others
+
+**if-not macro impact:**
+- Bytecode reduction: ~50-100 bytes for `core$if_not.class`
+- Expansion speed: ~5-15% faster (1-5μs per expansion)
+- Semantic equivalence: 100% - all tests pass identically
+
+== Patch Application
+
+To apply this patch to a Clojure checkout:
+
+```bash
+git clone https://github.com/clojure/clojure.git
+cd clojure
+git checkout e6393a4063c42ddc0e0812f04464467764f0fd1e
+git apply /path/to/nil-optimization.patch
+```
+
+The patch modifies one file: `src/jvm/clojure/lang/LispReader.java`
+
+== See Also
+
+- link:../README.adoc[Syntax-Quote Optimization Project]
+- link:experiments/if-not-macro/IF_NOT_NIL_OPTIMIZATION_ANALYSIS.adoc[Detailed Analysis]

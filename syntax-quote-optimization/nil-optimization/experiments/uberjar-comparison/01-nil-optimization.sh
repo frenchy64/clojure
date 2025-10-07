@@ -21,8 +21,9 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+SUBPROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 RESULTS_DIR="$SCRIPT_DIR/results/01-nil-optimization"
+BUILD_SCRIPT="$SUBPROJECT_ROOT/build-optimized-uberjar.sh"
 
 # Clojure version and checksums
 CLOJURE_VERSION="1.12.3"
@@ -32,8 +33,6 @@ CLOJURE_JAR_URL="https://repo1.maven.org/maven2/org/clojure/clojure/${CLOJURE_VE
 CLOJURE_JAR_SHA256="cb2a1a3db1c2cd76ef4fa4a545d5a65f10b1b48b7f7672f0a109f5476f057166"
 
 mkdir -p "$RESULTS_DIR"
-
-cd "$REPO_ROOT"
 
 echo "=========================================="
 echo "Experiment 1: Nil Optimization"
@@ -91,18 +90,24 @@ echo "Step 2: Build Optimized Uberjar"
 echo "=========================================="
 
 echo "Building optimized uberjar with nil optimization..."
-# Clean build with direct linking enabled (default in pom.xml)
-# Using -Plocal profile to include dependencies, creating an uberjar
-mvn -ntp -B clean package -Dmaven.test.skip=true -Plocal 2>&1 | tail -20
-
-# Find the built JAR
-BUILT_JAR=$(find target -name "clojure-*.jar" -not -name "*-slim.jar" -not -name "*-sources.jar" -not -name "*-javadoc.jar" | head -1)
-if [ -z "$BUILT_JAR" ]; then
-    echo "ERROR: Could not find built JAR in target/"
+echo "Using shared build script: $BUILD_SCRIPT"
+if [ ! -x "$BUILD_SCRIPT" ]; then
+    echo "ERROR: Build script not found or not executable: $BUILD_SCRIPT"
     exit 1
 fi
 
-cp "$BUILT_JAR" "$RESULTS_DIR/optimized.jar"
+# Build to a temporary directory then copy
+TEMP_BUILD_DIR="$RESULTS_DIR/temp-build"
+"$BUILD_SCRIPT" "$TEMP_BUILD_DIR"
+
+# Copy the built JAR
+if [ ! -f "$TEMP_BUILD_DIR/clojure-nil-optimized.jar" ]; then
+    echo "ERROR: Built JAR not found: $TEMP_BUILD_DIR/clojure-nil-optimized.jar"
+    exit 1
+fi
+
+cp "$TEMP_BUILD_DIR/clojure-nil-optimized.jar" "$RESULTS_DIR/optimized.jar"
+rm -rf "$TEMP_BUILD_DIR"
 OPTIMIZED_SIZE=$(stat -c%s "$RESULTS_DIR/optimized.jar" 2>/dev/null || stat -f%z "$RESULTS_DIR/optimized.jar")
 echo "✓ Built optimized JAR"
 echo "Optimized size: $OPTIMIZED_SIZE bytes"

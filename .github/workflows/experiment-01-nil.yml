@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - copilot/**
-  pull_request:
   workflow_dispatch:
 
 jobs:
@@ -24,6 +23,11 @@ jobs:
         java-version: '21'
         distribution: 'temurin'
         cache: 'maven'
+    
+    - name: Install reproducible build tools
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y diffoscope strip-nondeterminism
     
     - name: Run Nil Optimization Experiment
       run: |
@@ -48,16 +52,15 @@ jobs:
         fi
     
     - name: Verify Results Match Expected
-      if: github.event_name == 'pull_request' || github.event_name == 'push'
+      if: github.event_name == 'push'
       run: |
-        # This step will verify results match expected values once we've established baseline
-        # For now, just check that the experiment completed successfully
+        # Verify experiment completed successfully
         if [ ! -f experiments/results/01-nil-optimization/summary.txt ]; then
           echo "ERROR: Experiment did not generate expected results"
           exit 1
         fi
         
-        # Check that both JARs were built
+        # Check that both JARs were analyzed
         if [ ! -f experiments/results/01-nil-optimization/baseline.jar ]; then
           echo "ERROR: Baseline JAR not found"
           exit 1
@@ -66,6 +69,11 @@ jobs:
         if [ ! -f experiments/results/01-nil-optimization/optimized.jar ]; then
           echo "ERROR: Optimized JAR not found"
           exit 1
+        fi
+        
+        # Check for diffoscope report
+        if [ ! -f experiments/results/01-nil-optimization/diffoscope-report.txt ]; then
+          echo "WARNING: Diffoscope report not found"
         fi
         
         echo "✓ Experiment completed successfully"

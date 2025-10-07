@@ -16,3 +16,4 @@ dependency-reduced-pom.xml
 
 # Experiment results (generated, don't commit)
 experiments/results/
+experiments/synthetic-benchmark-nil/results/

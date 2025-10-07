@@ -2,17 +2,84 @@
 
 ## Overview
 
-This experiment measures the impact of optimizing syntax-quote to treat `nil` as a self-evaluating form, similar to strings, numbers, keywords, and characters.
+This experiment measures the impact of optimizing syntax-quote to treat `nil` as a self-evaluating form using reproducible builds methodology and professional comparison tools.
 
 ## Hypothesis
 
-**Before**: `nil => (quote nil)` - nil is wrapped in a quote form  
-**After**: `nil => nil` - nil is returned directly
+**Before**: `` `nil `` => `(quote nil)` - nil is wrapped in a quote form  
+**After**: `` `nil `` => `nil` - nil is returned directly
 
 **Expected Impact**: Reducing unnecessary quote wrapping should:
 1. Reduce AOT-compiled bytecode size
 2. Simplify code generation for macros using nil
 3. Improve consistency (nil behaves like other self-evaluating constants)
+
+## Methodology (Updated)
+
+This experiment now uses industry-standard reproducible builds tools:
+
+1. **Baseline**: Official Clojure 1.12.0 JAR from Maven Central (SHA256 verified)
+2. **Optimized**: Current branch built with same procedure as releases
+3. **Comparison**: Using `diffoscope` and `strip-nondeterminism` for deterministic analysis
+4. **Bytecode Analysis**: Detailed `javap` comparison of changed classes
+
+### Key Improvements
+
+- No longer builds from master branch (version drift issues)
+- Uses official release as baseline for stability
+- Strips timestamps with `strip-nondeterminism` for fair comparison
+- Employs `diffoscope` for comprehensive diff analysis
+- Separates Java source changes from Clojure compilation changes
+- Includes synthetic benchmark for isolated testing
+
+## Running the Experiment
+
+### Prerequisites
+
+```bash
+sudo apt-get install diffoscope strip-nondeterminism
+```
+
+### Execute
+
+```bash
+cd experiments
+./01-nil-optimization.sh
+```
+
+## Output Analysis
+
+### Three Categories of Changes
+
+1. **Java Source Changes** (LispReader.java)
+   - Files: `LispReader-*-bytecode.txt`, `syntaxQuote-*.txt`
+   - Impact: Additional null check in `syntaxQuote()` method
+   
+2. **Clojure Compilation Strategy Changes**
+   - Files: `changed-*-baseline.txt`, `changed-*-optimized.txt`
+   - Impact: Different bytecode in macros using syntax-quoted nil
+   
+3. **Overall Size Impact**
+   - Stripped JAR comparison for fair measurement
+   - Exact byte count and percentage reduction
+
+### Reports Generated
+
+- `summary.txt` - Complete analysis with interpretation
+- `diffoscope-report.txt` - Full diff of stripped JARs
+- `*-bytecode.txt` - Individual class bytecode comparisons
+- `optimized-stripped.sha256` - For reproducibility verification
+
+## Synthetic Benchmark
+
+See `experiments/synthetic-benchmark-nil/` for isolated testing of nil-heavy macros using direct `java -cp` compilation (no Maven/CLI).
+
+## Reproducibility
+
+- Baseline JAR verified against: `7d5eaa5b31d4c5ab12e4df90aeb4e8ba85c1a6cc279120b69f44f3eb1abca9ba`
+- Optimized stripped JAR SHA256 recorded for verification
+- All tools are deterministic
+- Results should be identical across runs
 
 ## Code Change
 

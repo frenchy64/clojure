@@ -6,7 +6,7 @@
 # unnecessary quote wrapping bytecode.
 #
 # METHODOLOGY:
-# 1. Download official Clojure 1.12.0 direct-linked uberjar from Maven Central
+# 1. Download official Clojure 1.12.3 direct-linked uberjar from Maven Central
 # 2. Verify SHA256 checksum for reproducibility
 # 3. Build optimized uberjar from current branch using official release procedure
 # 4. Strip non-deterministic data (timestamps) from both JARs
@@ -25,10 +25,11 @@ REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 RESULTS_DIR="$SCRIPT_DIR/results/01-nil-optimization"
 
 # Clojure version and checksums
-CLOJURE_VERSION="1.12.0"
+CLOJURE_VERSION="1.12.3"
 CLOJURE_JAR_URL="https://repo1.maven.org/maven2/org/clojure/clojure/${CLOJURE_VERSION}/clojure-${CLOJURE_VERSION}.jar"
-# SHA256 of the official Clojure 1.12.0 direct-linked uberjar
-CLOJURE_JAR_SHA256="7d5eaa5b31d4c5ab12e4df90aeb4e8ba85c1a6cc279120b69f44f3eb1abca9ba"
+# SHA256 of the official Clojure 1.12.3 direct-linked uberjar
+# Verified by downloading and computing: sha256sum clojure-1.12.3.jar
+CLOJURE_JAR_SHA256="cb2a1a3db1c2cd76ef4fa4a545d5a65f10b1b48b7f7672f0a109f5476f057166"
 
 mkdir -p "$RESULTS_DIR"
 

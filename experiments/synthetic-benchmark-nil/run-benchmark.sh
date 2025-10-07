@@ -6,7 +6,7 @@
 # Clojure versions.
 #
 # METHODOLOGY:
-# 1. Download official Clojure 1.12.0 as baseline
+# 1. Download official Clojure 1.12.3 as baseline
 # 2. Build optimized Clojure with nil optimization
 # 3. Compile test namespace with both versions using direct java -cp calls
 # 4. Strip non-deterministic data from compiled classes
@@ -16,9 +16,11 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 RESULTS_DIR="$SCRIPT_DIR/results"
-CLOJURE_VERSION="1.12.0"
+CLOJURE_VERSION="1.12.3"
 CLOJURE_JAR_URL="https://repo1.maven.org/maven2/org/clojure/clojure/${CLOJURE_VERSION}/clojure-${CLOJURE_VERSION}.jar"
-CLOJURE_JAR_SHA256="7d5eaa5b31d4c5ab12e4df90aeb4e8ba85c1a6cc279120b69f44f3eb1abca9ba"
+# SHA256 of the official Clojure 1.12.3 direct-linked uberjar
+# Verified by downloading and computing: sha256sum clojure-1.12.3.jar
+CLOJURE_JAR_SHA256="cb2a1a3db1c2cd76ef4fa4a545d5a65f10b1b48b7f7672f0a109f5476f057166"
 
 mkdir -p "$RESULTS_DIR/baseline-classes"
 mkdir -p "$RESULTS_DIR/optimized-classes"

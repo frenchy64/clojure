@@ -18,7 +18,7 @@ This experiment measures the impact of optimizing syntax-quote to treat `nil` as
 
 This experiment now uses industry-standard reproducible builds tools:
 
-1. **Baseline**: Official Clojure 1.12.0 JAR from Maven Central (SHA256 verified)
+1. **Baseline**: Official Clojure 1.12.3 JAR from Maven Central (SHA256 verified)
 2. **Optimized**: Current branch built with same procedure as releases
 3. **Comparison**: Using `diffoscope` and `strip-nondeterminism` for deterministic analysis
 4. **Bytecode Analysis**: Detailed `javap` comparison of changed classes

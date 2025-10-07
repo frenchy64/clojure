@@ -72,6 +72,11 @@ cd "$WORK_DIR"
 OPTIMIZED_SHA256=$(sha256sum clojure-optimized.jar | awk '{print $1}')
 echo "✓ Built optimized JAR: $(basename $OPTIMIZED_JAR)"
 echo "  SHA256: $OPTIMIZED_SHA256"
+
+# Copy spec dependencies for optimized jar too
+cp spec.alpha.jar optimized-spec.alpha.jar
+cp core.specs.alpha.jar optimized-core.specs.alpha.jar
+OPTIMIZED_CP="clojure-optimized.jar:optimized-spec.alpha.jar:optimized-core.specs.alpha.jar"
 echo ""
 
 # Create comprehensive test code (minimal version that doesn't require spec.alpha)
@@ -159,7 +164,7 @@ echo ""
 
 echo "=== Testing Optimized Clojure ==="
 echo ""
-java -cp clojure-optimized.jar clojure.main -e "$(cat test-equivalence.clj)" > optimized-equiv.txt 2>&1
+java -cp "$OPTIMIZED_CP" clojure.main -e "$(cat test-equivalence.clj)" > optimized-equiv.txt 2>&1
 cat optimized-equiv.txt
 echo ""
 

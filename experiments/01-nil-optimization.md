@@ -16,11 +16,11 @@ This experiment measures the impact of optimizing syntax-quote to treat `nil` as
 
 ## Methodology (Updated)
 
-This experiment now uses industry-standard reproducible builds tools:
+This experiment uses reproducible builds methodology with efficient comparison:
 
 1. **Baseline**: Official Clojure 1.12.3 JAR from Maven Central (SHA256 verified)
 2. **Optimized**: Current branch built with same procedure as releases
-3. **Comparison**: Using `diffoscope` and `strip-nondeterminism` for deterministic analysis
+3. **Comparison**: Extract and compare class files using checksums for fast identification
 4. **Bytecode Analysis**: Detailed `javap` comparison of changed classes
 
 ### Key Improvements
@@ -28,7 +28,7 @@ This experiment now uses industry-standard reproducible builds tools:
 - No longer builds from master branch (version drift issues)
 - Uses official release as baseline for stability
 - Strips timestamps with `strip-nondeterminism` for fair comparison
-- Employs `diffoscope` for comprehensive diff analysis
+- Custom efficient class file comparison (faster than diffoscope for CI)
 - Separates Java source changes from Clojure compilation changes
 - Includes synthetic benchmark for isolated testing
 
@@ -37,7 +37,7 @@ This experiment now uses industry-standard reproducible builds tools:
 ### Prerequisites
 
 ```bash
-sudo apt-get install diffoscope strip-nondeterminism
+sudo apt-get install strip-nondeterminism
 ```
 
 ### Execute
@@ -66,7 +66,7 @@ cd experiments
 ### Reports Generated
 
 - `summary.txt` - Complete analysis with interpretation
-- `diffoscope-report.txt` - Full diff of stripped JARs
+- `class-differences.txt` - List of all changed/added/removed class files
 - `*-bytecode.txt` - Individual class bytecode comparisons
 - `optimized-stripped.sha256` - For reproducibility verification
 

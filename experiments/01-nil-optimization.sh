@@ -10,7 +10,7 @@
 # 2. Verify SHA256 checksum for reproducibility
 # 3. Build optimized uberjar from current branch using official release procedure
 # 4. Strip non-deterministic data (timestamps) from both JARs
-# 5. Compare using diffoscope to identify exact bytecode differences
+# 5. Compare JARs by extracting and checksumming class files to identify differences
 # 6. Analyze differences:
 #    a. Changes from modified Java source (LispReader.java)
 #    b. Changes from different Clojure compilation strategy
@@ -47,10 +47,10 @@ echo ""
 
 # Check for required tools
 echo "Checking for required tools..."
-for tool in diffoscope strip-nondeterminism javap sha256sum unzip; do
+for tool in strip-nondeterminism javap sha256sum unzip; do
     if ! command -v $tool &> /dev/null; then
         echo "ERROR: Required tool '$tool' is not installed"
-        echo "Please install: sudo apt-get install diffoscope strip-nondeterminism"
+        echo "Please install: sudo apt-get install strip-nondeterminism"
         exit 1
     fi
 done
@@ -133,38 +133,78 @@ echo "Optimized stripped SHA256: $OPTIMIZED_STRIPPED_SHA256"
 echo "$OPTIMIZED_STRIPPED_SHA256" > "$RESULTS_DIR/optimized-stripped.sha256"
 echo ""
 
-# Step 4: Compare with diffoscope
+# Step 4: Extract and compare class files
 echo "=========================================="
-echo "Step 4: Compare with Diffoscope"
-echo "=========================================="
-
-echo "Running diffoscope to identify all differences..."
-# diffoscope exits with non-zero if differences found, so don't fail on that
-diffoscope --text "$RESULTS_DIR/diffoscope-report.txt" \
-    "$RESULTS_DIR/baseline-stripped.jar" \
-    "$RESULTS_DIR/optimized-stripped.jar" 2>&1 | head -20 || true
-
-if [ -f "$RESULTS_DIR/diffoscope-report.txt" ]; then
-    DIFF_SIZE=$(wc -l < "$RESULTS_DIR/diffoscope-report.txt")
-    echo "✓ Diffoscope report generated: $DIFF_SIZE lines"
-    echo "  Report saved to: diffoscope-report.txt"
-else
-    echo "⚠ Diffoscope report not generated"
-fi
-echo ""
-
-# Step 5: Extract and analyze changed classes
-echo "=========================================="
-echo "Step 5: Analyze Bytecode Differences"
+echo "Step 4: Extract and Compare Class Files"
 echo "=========================================="
 
 mkdir -p "$RESULTS_DIR/baseline-classes"
 mkdir -p "$RESULTS_DIR/optimized-classes"
 
 # Extract all class files
-echo "Extracting class files..."
+echo "Extracting class files from both JARs..."
 unzip -q "$RESULTS_DIR/baseline-stripped.jar" "*.class" -d "$RESULTS_DIR/baseline-classes" 2>/dev/null || true
 unzip -q "$RESULTS_DIR/optimized-stripped.jar" "*.class" -d "$RESULTS_DIR/optimized-classes" 2>/dev/null || true
+echo "✓ Class files extracted"
+
+# Find all class files and compare using checksums
+echo ""
+echo "Comparing class files..."
+DIFF_REPORT="$RESULTS_DIR/class-differences.txt"
+> "$DIFF_REPORT"  # Clear file
+
+TOTAL_CLASSES=0
+CHANGED_CLASSES=0
+IDENTICAL_CLASSES=0
+
+# Build list of all unique class file paths
+declare -A ALL_CLASSES
+for class_file in $(find "$RESULTS_DIR/baseline-classes" -name "*.class" -type f); do
+    rel_path="${class_file#$RESULTS_DIR/baseline-classes/}"
+    ALL_CLASSES["$rel_path"]=1
+    TOTAL_CLASSES=$((TOTAL_CLASSES + 1))
+done
+for class_file in $(find "$RESULTS_DIR/optimized-classes" -name "*.class" -type f); do
+    rel_path="${class_file#$RESULTS_DIR/optimized-classes/}"
+    if [ -z "${ALL_CLASSES[$rel_path]}" ]; then
+        ALL_CLASSES["$rel_path"]=1
+        TOTAL_CLASSES=$((TOTAL_CLASSES + 1))
+    fi
+done
+
+# Compare each class file
+for rel_path in "${!ALL_CLASSES[@]}"; do
+    baseline_file="$RESULTS_DIR/baseline-classes/$rel_path"
+    optimized_file="$RESULTS_DIR/optimized-classes/$rel_path"
+    
+    if [ ! -f "$baseline_file" ]; then
+        echo "ADDED: $rel_path" >> "$DIFF_REPORT"
+        CHANGED_CLASSES=$((CHANGED_CLASSES + 1))
+    elif [ ! -f "$optimized_file" ]; then
+        echo "REMOVED: $rel_path" >> "$DIFF_REPORT"
+        CHANGED_CLASSES=$((CHANGED_CLASSES + 1))
+    else
+        # Both files exist, compare them
+        if ! cmp -s "$baseline_file" "$optimized_file"; then
+            echo "CHANGED: $rel_path" >> "$DIFF_REPORT"
+            CHANGED_CLASSES=$((CHANGED_CLASSES + 1))
+        else
+            IDENTICAL_CLASSES=$((IDENTICAL_CLASSES + 1))
+        fi
+    fi
+done
+
+echo "✓ Comparison complete"
+echo "  Total class files: $TOTAL_CLASSES"
+echo "  Identical: $IDENTICAL_CLASSES"
+echo "  Changed: $CHANGED_CLASSES"
+echo "  Differences saved to: class-differences.txt"
+echo ""
+
+# Step 5: Analyze bytecode differences
+echo "=========================================="
+echo "Step 5: Analyze Bytecode Differences"
+echo "=========================================="
 
 # Find Java source changes (LispReader.class)
 echo ""
@@ -186,31 +226,34 @@ fi
 
 # Find Clojure compilation differences
 echo ""
-echo "Finding AOT-compiled Clojure classes with differences..."
-CHANGED_CLOJURE_CLASSES=0
+echo "Analyzing AOT-compiled Clojure classes from difference report..."
 
-# Compare all Clojure core classes
-for baseline_class in "$RESULTS_DIR/baseline-classes/clojure/core"*.class; do
-    if [ -f "$baseline_class" ]; then
-        classname=$(basename "$baseline_class")
-        optimized_class="$RESULTS_DIR/optimized-classes/clojure/core$classname"
-        
-        if [ -f "$optimized_class" ]; then
-            if ! cmp -s "$baseline_class" "$optimized_class"; then
-                CHANGED_CLOJURE_CLASSES=$((CHANGED_CLOJURE_CLASSES + 1))
-                
-                # Only generate detailed reports for first 5 changed classes
-                if [ $CHANGED_CLOJURE_CLASSES -le 5 ]; then
-                    echo "  Changed: clojure/core$classname"
-                    javap -c "$baseline_class" > "$RESULTS_DIR/changed-${classname%.class}-baseline.txt" 2>&1
-                    javap -c "$optimized_class" > "$RESULTS_DIR/changed-${classname%.class}-optimized.txt" 2>&1
-                fi
+# Count changed Clojure classes from the diff report
+CHANGED_CLOJURE_CLASSES=$(grep "^CHANGED: clojure/core" "$DIFF_REPORT" | wc -l)
+
+# Generate detailed bytecode for first 5 changed Clojure classes
+ANALYZED_COUNT=0
+while IFS= read -r line; do
+    if [[ "$line" =~ ^CHANGED:\ clojure/core(.+)\.class$ ]]; then
+        if [ $ANALYZED_COUNT -lt 5 ]; then
+            rel_path=$(echo "$line" | sed 's/^CHANGED: //')
+            classname=$(basename "$rel_path" .class)
+            echo "  Analyzing: $rel_path"
+            
+            baseline_file="$RESULTS_DIR/baseline-classes/$rel_path"
+            optimized_file="$RESULTS_DIR/optimized-classes/$rel_path"
+            
+            if [ -f "$baseline_file" ] && [ -f "$optimized_file" ]; then
+                javap -c "$baseline_file" > "$RESULTS_DIR/changed-${classname}-baseline.txt" 2>&1
+                javap -c "$optimized_file" > "$RESULTS_DIR/changed-${classname}-optimized.txt" 2>&1
+                ANALYZED_COUNT=$((ANALYZED_COUNT + 1))
             fi
         fi
     fi
-done
+done < "$DIFF_REPORT"
 
 echo "Found $CHANGED_CLOJURE_CLASSES changed AOT-compiled Clojure classes"
+echo "Generated detailed bytecode analysis for $ANALYZED_COUNT classes"
 echo ""
 
 # Step 6: Generate summary report
@@ -284,10 +327,10 @@ BYTECODE ANALYSIS
 
 DETAILED REPORTS
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-- diffoscope-report.txt:        Complete diff of stripped JARs
-- LispReader-*-bytecode.txt:    Full LispReader class bytecode
-- syntaxQuote-*.txt:            syntaxQuote method bytecode comparison
-- changed-*-baseline.txt:       Individual changed Clojure class bytecode
+- class-differences.txt:         List of all changed/added/removed class files
+- LispReader-*-bytecode.txt:     Full LispReader class bytecode
+- syntaxQuote-*.txt:             syntaxQuote method bytecode comparison
+- changed-*-baseline.txt:        Individual changed Clojure class bytecode
 
 INTERPRETATION
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -320,7 +363,7 @@ This suggests:
 2. Changed compilation strategy has overhead
 3. May need to investigate unexpected side effects
 
-Check diffoscope-report.txt and bytecode files for details.
+Check class-differences.txt and bytecode files for details.
 EOF
 else
     cat >> "$RESULTS_DIR/summary.txt" << EOF
@@ -334,7 +377,7 @@ This could mean:
 3. Size difference is below measurement precision
 4. Java vs Clojure bytecode changes cancel out
 
-Check changed class count and diffoscope report for qualitative impact.
+Check changed class count and class-differences.txt for qualitative impact.
 EOF
 fi
 
@@ -342,7 +385,7 @@ cat >> "$RESULTS_DIR/summary.txt" << EOF
 
 NEXT STEPS
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-1. Review diffoscope-report.txt for complete diff
+1. Review class-differences.txt for complete list of changes
 2. Examine bytecode changes in detail
 3. Compare with synthetic benchmark results
 4. Proceed to Phase 2 (empty collections) if successful

@@ -27,7 +27,7 @@ jobs:
     - name: Install reproducible build tools
       run: |
         sudo apt-get update
-        sudo apt-get install -y diffoscope strip-nondeterminism
+        sudo apt-get install -y strip-nondeterminism
     
     - name: Run Nil Optimization Experiment
       run: |
@@ -71,9 +71,9 @@ jobs:
           exit 1
         fi
         
-        # Check for diffoscope report
-        if [ ! -f experiments/results/01-nil-optimization/diffoscope-report.txt ]; then
-          echo "WARNING: Diffoscope report not found"
+        # Check for class differences report
+        if [ ! -f experiments/results/01-nil-optimization/class-differences.txt ]; then
+          echo "WARNING: Class differences report not found"
         fi
         
         echo "✓ Experiment completed successfully"

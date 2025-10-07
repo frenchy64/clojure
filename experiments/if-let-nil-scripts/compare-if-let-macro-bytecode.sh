@@ -47,7 +47,7 @@ echo ""
 echo "Building optimized Clojure..."
 cd -
 mvn clean package -Plocal -Dmaven.test.skip=true > /dev/null 2>&1
-OPTIMIZED_JAR=$(find target -name "clojure-*.jar" ! -name "*-slim.jar" | head -1)
+OPTIMIZED_JAR=$(find target -name "clojure-*.jar" ! -name "*-slim.jar" ! -name "*-sources.jar" ! -name "*-javadoc.jar" | head -1)
 if [ ! -f "$OPTIMIZED_JAR" ]; then
     echo "ERROR: Could not find optimized JAR in target/"
     exit 1

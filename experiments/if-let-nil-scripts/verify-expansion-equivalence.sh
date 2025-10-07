@@ -14,6 +14,13 @@ BASELINE_URL="https://repo1.maven.org/maven2/org/clojure/clojure/1.12.3/clojure-
 # Verified by: curl -sL $BASELINE_URL | sha256sum
 BASELINE_SHA256="cb2a1a3db1c2cd76ef4fa4a545d5a65f10b1b48b7f7672f0a109f5476f057166"
 
+# spec.alpha is required by Clojure
+SPEC_URL="https://repo1.maven.org/maven2/org/clojure/spec.alpha/0.5.238/spec.alpha-0.5.238.jar"
+SPEC_SHA256="94cd99b6ea639641f37af4860a643b6ed399ee5a8be5d717cff0b663c8d75077"
+
+CORE_SPECS_URL="https://repo1.maven.org/maven2/org/clojure/core.specs.alpha/0.4.74/core.specs.alpha-0.4.74.jar"
+CORE_SPECS_SHA256="eb73ac08cf49ba840c88ba67beef11336ca554333d9408808d78946e0feb9ddb"
+
 WORK_DIR="/tmp/if-let-expansion-equiv-$$"
 mkdir -p "$WORK_DIR"
 cd "$WORK_DIR"
@@ -38,16 +45,24 @@ verify_sha256() {
 }
 
 # Download and verify baseline Clojure
-echo "Downloading baseline Clojure 1.12.3..."
+echo "Downloading baseline Clojure 1.12.3 and dependencies..."
 curl -sL "$BASELINE_URL" -o clojure-baseline.jar
 verify_sha256 clojure-baseline.jar "$BASELINE_SHA256"
+
+curl -sL "$SPEC_URL" -o spec.alpha.jar
+verify_sha256 spec.alpha.jar "$SPEC_SHA256"
+
+curl -sL "$CORE_SPECS_URL" -o core.specs.alpha.jar
+verify_sha256 core.specs.alpha.jar "$CORE_SPECS_SHA256"
+
+BASELINE_CP="clojure-baseline.jar:spec.alpha.jar:core.specs.alpha.jar"
 echo ""
 
 # Build optimized version
 echo "Building optimized Clojure..."
 cd -
 mvn clean package -Plocal -Dmaven.test.skip=true > /dev/null 2>&1
-OPTIMIZED_JAR=$(find target -name "clojure-*.jar" ! -name "*-slim.jar" | head -1)
+OPTIMIZED_JAR=$(find target -name "clojure-*.jar" ! -name "*-slim.jar" ! -name "*-sources.jar" ! -name "*-javadoc.jar" | head -1)
 if [ ! -f "$OPTIMIZED_JAR" ]; then
     echo "ERROR: Could not find optimized JAR in target/"
     exit 1
@@ -59,9 +74,10 @@ echo "✓ Built optimized JAR: $(basename $OPTIMIZED_JAR)"
 echo "  SHA256: $OPTIMIZED_SHA256"
 echo ""
 
-# Create comprehensive test code
+# Create comprehensive test code (minimal version that doesn't require spec.alpha)
 cat > test-equivalence.clj <<'EOF'
-(ns test-equivalence)
+;; Minimal test that doesn't require spec.alpha
+;; Run with: java -cp clojure.jar clojure.lang.Script test-equivalence.clj
 
 (println "Testing if-let expansion equivalence...")
 (println "")
@@ -78,7 +94,7 @@ cat > test-equivalence.clj <<'EOF'
 
 ;; Test Case 2: Expansion form
 (println "Test 2: Macro expansion")
-(let [expansion (macroexpand-1 '(if-let [x (some-fn)] x))]
+(let [expansion (macroexpand-1 '(if-let [x (fn [] nil)] x))]
   (println "  Expansion form:" expansion)
   ;; The key test: does it evaluate correctly?
   (let [result (eval expansion)]
@@ -113,8 +129,8 @@ cat > test-equivalence.clj <<'EOF'
         [(fn [] (if-let [x 0] :yes :no)) :yes "0 binding"]
         [(fn [] (if-let [x ""] :yes :no)) :yes "empty string binding"]
         [(fn [] (if-let [x []] :yes :no)) :yes "empty vector binding"]
-        [(fn [] (if-let [x (some #{5} [1 2 3])] x :none)) :none "failed some"]
-        [(fn [] (if-let [x (some #{2} [1 2 3])] x :none)) 2 "successful some"]
+        [(fn [] (if-let [x (first (filter even? [1 3 5]))] x :none)) :none "failed filter"]
+        [(fn [] (if-let [x (first (filter even? [1 2 3]))] x :none)) 2 "successful filter"]
       ]]
   (doseq [[test-fn expected desc] test-cases]
     (let [actual (test-fn)
@@ -137,13 +153,13 @@ EOF
 
 echo "=== Testing Baseline Clojure ==="
 echo ""
-java -cp clojure-baseline.jar clojure.main test-equivalence.clj > baseline-equiv.txt 2>&1
+java -cp "$BASELINE_CP" clojure.main -e "$(cat test-equivalence.clj)" > baseline-equiv.txt 2>&1
 cat baseline-equiv.txt
 echo ""
 
 echo "=== Testing Optimized Clojure ==="
 echo ""
-java -cp clojure-optimized.jar clojure.main test-equivalence.clj > optimized-equiv.txt 2>&1
+java -cp clojure-optimized.jar clojure.main -e "$(cat test-equivalence.clj)" > optimized-equiv.txt 2>&1
 cat optimized-equiv.txt
 echo ""
 

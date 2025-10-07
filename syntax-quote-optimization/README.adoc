@@ -6,11 +6,43 @@
 
 This project contains experimental analysis and verification of piecemeal optimizations to Clojure's syntax-quote (backtick) reader. The goal is to measure and document the impact of individual optimizations before proposing them for inclusion in Clojure.
 
+== Background and Motivation
+
+This work is part of a larger effort tracked in https://clojure.atlassian.net/browse/CLJ-2908[CLJ-2908: Optimize syntax-quote]. The overarching ticket proposed comprehensive optimizations to the syntax-quote reader, but the Clojure maintainers determined that the scope was too large. To make more persuasive cases for individual optimizations, we are splitting the work into smaller, focused experiments.
+
+Many of the specific optimizations we're testing were originally proposed in https://clojure.atlassian.net/browse/CLJ-1506[CLJ-1506: Optimize some syntax-quote cases], which suggests making simple literals like `nil`, `true`, `false`, empty collections, and other constants self-evaluating in syntax-quote. This ticket may be repurposed for our initial optimizations.
+
+=== Why Optimize Syntax-Quote?
+
+Syntax-quote is heavily used in Clojure macros. Every time a macro expands, it must execute the syntax-quote code, and the resulting expansion must be compiled. Inefficiencies compound:
+
+* A single developer might trigger thousands of macro expansions per day during development
+* Each syntax-quote expansion creates unnecessary allocations and computations
+* The expanded code must be compiled, which is slower for complex expressions
+* AOT-compiled code is larger when syntax-quote returns verbose expansions
+
+For example, in Clojure 1.12:
+```clojure
+`[] => (apply vector (seq (concat)))
+```
+
+But with optimization:
+```clojure
+`[] => []
+```
+
+Both evaluate to the same value, but the optimized version is:
+* Faster to compute at read time
+* Faster to compile
+* Smaller in the resulting bytecode
+* Utilizes cached empty collection constants
+
 == Project Structure
 
 ```
 syntax-quote-optimization/
 ├── README.adoc                    # This file
+├── optimize-syntax-quote.md       # Technical motivation document
 ├── nil-optimization/              # Subproject: nil optimization
 │   ├── nil-optimization.patch     # Git patch for the optimization
 │   ├── build-optimized-uberjar.sh # Shared build script
@@ -32,16 +64,30 @@ Each optimization follows a consistent workflow:
 
 == Optimization Pipeline
 
-The planned sequence of optimizations, from simplest to most complex:
+The planned sequence of optimizations, from simplest to most complex (based on CLJ-1506 and CLJ-2908):
 
 1. ✓ **Nil optimization** - Make `nil` self-evaluating (current)
-2. Empty collection literals - Make `[]`, `{}`, `()`, `#{}` self-evaluating
-3. Constant collection lifting - Optimize collections with only constants
-4. Mixed constant/unquote collections - Optimize partially constant collections
-5. Splicing optimizations - Improve unquote-splicing handling
-6. Complex collection patterns - Advanced optimization patterns
+2. **Boolean literals** - Make `true` and `false` self-evaluating
+3. **Empty collection literals** - Make `[]`, `{}`, `()`, `#{}` self-evaluating
+4. **Simple constant collections** - Optimize collections containing only constants
+5. **Constant collection lifting** - More sophisticated constant folding
+6. **Mixed constant/unquote collections** - Optimize partially constant collections
+7. **Splicing optimizations** - Improve unquote-splicing handling
+8. **Complex collection patterns** - Advanced optimization patterns
 
 Each optimization builds understanding for the next, starting with the simplest possible change.
+
+== JIRA Ticket Context
+
+* **https://clojure.atlassian.net/browse/CLJ-2908[CLJ-2908]**: Overarching ticket for syntax-quote optimizations
+  - Initially too broad in scope
+  - Being split into smaller, focused tickets
+  - This project provides evidence for the split
+
+* **https://clojure.atlassian.net/browse/CLJ-1506[CLJ-1506]**: Specific optimizations proposed
+  - Making simple literals self-evaluating
+  - May be repurposed for our initial optimizations
+  - Covers nil, booleans, and empty collections
 
 == Contributing
 
@@ -58,3 +104,4 @@ When adding a new optimization:
 - link:nil-optimization/README.adoc[Nil Optimization Subproject]
 - link:nil-optimization/experiments/uberjar-comparison/01-nil-optimization.md[Uberjar Comparison]
 - link:nil-optimization/experiments/if-not-macro/IF_NOT_NIL_OPTIMIZATION_ANALYSIS.adoc[if-not Macro Analysis]
+- link:optimize-syntax-quote.md[Technical Motivation Document]

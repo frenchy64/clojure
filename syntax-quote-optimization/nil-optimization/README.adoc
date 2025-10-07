@@ -6,6 +6,8 @@
 
 This subproject contains the analysis and verification of making `nil` self-evaluating in Clojure's syntax-quote reader.
 
+This optimization is part of https://clojure.atlassian.net/browse/CLJ-2908[CLJ-2908: Optimize syntax-quote] and was originally proposed in https://clojure.atlassian.net/browse/CLJ-1506[CLJ-1506: Optimize some syntax-quote cases].
+
 == The Optimization
 
 Instead of expanding pass:[`nil] to `(quote nil)`, the optimized reader expands it to just `nil`.

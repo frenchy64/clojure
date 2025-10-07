@@ -22,6 +22,23 @@ CLOJURE_JAR_URL="https://repo1.maven.org/maven2/org/clojure/clojure/${CLOJURE_VE
 # Verified by downloading and computing: sha256sum clojure-1.12.3.jar
 CLOJURE_JAR_SHA256="cb2a1a3db1c2cd76ef4fa4a545d5a65f10b1b48b7f7672f0a109f5476f057166"
 
+# Function to verify SHA256 of a file
+verify_sha256() {
+    local file="$1"
+    local expected="$2"
+    local desc="$3"
+    
+    echo "Verifying SHA256 of $desc..."
+    local actual=$(sha256sum "$file" | awk '{print $1}')
+    if [ "$actual" != "$expected" ]; then
+        echo "ERROR: SHA256 mismatch for $desc!"
+        echo "Expected: $expected"
+        echo "Got:      $actual"
+        exit 1
+    fi
+    echo "✓ SHA256 verified for $desc"
+}
+
 mkdir -p "$RESULTS_DIR/baseline-classes"
 mkdir -p "$RESULTS_DIR/optimized-classes"
 
@@ -34,14 +51,11 @@ echo ""
 echo "Step 1: Download baseline Clojure ${CLOJURE_VERSION}..."
 if [ ! -f "$RESULTS_DIR/clojure-baseline.jar" ]; then
     curl -L -o "$RESULTS_DIR/clojure-baseline.jar" "$CLOJURE_JAR_URL"
+    verify_sha256 "$RESULTS_DIR/clojure-baseline.jar" "$CLOJURE_JAR_SHA256" "baseline Clojure JAR"
+else
+    echo "Using cached baseline JAR"
+    verify_sha256 "$RESULTS_DIR/clojure-baseline.jar" "$CLOJURE_JAR_SHA256" "cached baseline Clojure JAR"
 fi
-
-ACTUAL_SHA256=$(sha256sum "$RESULTS_DIR/clojure-baseline.jar" | awk '{print $1}')
-if [ "$ACTUAL_SHA256" != "$CLOJURE_JAR_SHA256" ]; then
-    echo "ERROR: SHA256 mismatch!"
-    exit 1
-fi
-echo "✓ Baseline Clojure verified"
 echo ""
 
 # Step 2: Get optimized Clojure JAR
@@ -57,9 +71,18 @@ else
     cd "$REPO_ROOT"
     mvn -ntp -B clean package -Dmaven.test.skip=true -Plocal 2>&1 | tail -10
     BUILT_JAR=$(find target -name "clojure-*.jar" -not -name "*-slim.jar" -not -name "*-sources.jar" -not -name "*-javadoc.jar" | head -1)
+    if [ -z "$BUILT_JAR" ]; then
+        echo "ERROR: No JAR file found in target directory"
+        exit 1
+    fi
     cp "$BUILT_JAR" "$RESULTS_DIR/clojure-optimized.jar"
     cd "$SCRIPT_DIR"
 fi
+
+# Record SHA256 of optimized JAR for reproducibility
+OPTIMIZED_SHA256=$(sha256sum "$RESULTS_DIR/clojure-optimized.jar" | awk '{print $1}')
+echo "Optimized JAR SHA256: $OPTIMIZED_SHA256"
+echo "$OPTIMIZED_SHA256" > "$RESULTS_DIR/clojure-optimized.jar.sha256"
 echo "✓ Optimized Clojure ready"
 echo ""
 

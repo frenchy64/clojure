@@ -1,0 +1,206 @@
+--- original/clojure-1.12.5/clojure/tools/deps/interop$invoke_tool.class
++++ rebuild/clojure-1.12.5/clojure/tools/deps/interop$invoke_tool.class
+├── procyon -ec {}
+│ @@ -181,123 +181,122 @@
+│                          Object proc = core$apply.invokeStatic(interop$invoke_tool.const__22.getRawRoot(), command_strs);
+│                          Object in = process$stdin.invokeStatic(proc);
+│                          Object out = process$stdout.invokeStatic(proc);
+│                          final Object process = proc;
+│                          proc = null;
+│                          Object err = process$stderr.invokeStatic(process);
+│                          core$push_thread_bindings.invokeStatic(core$hash_map.invokeStatic((ISeq)ArraySeq.create(interop$invoke_tool.const__28, null, interop$invoke_tool.const__29, null, interop$invoke_tool.const__30, Boolean.FALSE)));
+│ -                        final Object o11 = args2;
+│ -                        final Object o12 = in;
+│ +                        final Object o11 = in;
+│                          in = null;
+│ -                        ((IFn)new interop$invoke_tool$fn__12629(o11, o12)).invoke();
+│ +                        ((IFn)new interop$invoke_tool$fn__12629(o11, args2)).invoke();
+│                          final IFn fn2 = (IFn)interop$invoke_tool.const__32.getRawRoot();
+│ -                        final Object o13 = out;
+│ +                        final Object o12 = out;
+│                          out = null;
+│                          final Object invokeStatic5;
+│ -                        Object temp__5823__auto__12646 = invokeStatic5 = edn$read_string.invokeStatic(fn2.invoke(o13));
+│ +                        Object temp__5823__auto__12646 = invokeStatic5 = edn$read_string.invokeStatic(fn2.invoke(o12));
+│                          if (invokeStatic5 != null) {
+│                              if (invokeStatic5 != Boolean.FALSE) {
+│ -                                final Object o14 = temp__5823__auto__12646;
+│ +                                final Object o13 = temp__5823__auto__12646;
+│                                  temp__5823__auto__12646 = null;
+│ -                                Object envelope = o14;
+│ -                                final Object o15 = preserve_envelope;
+│ +                                Object envelope = o13;
+│ +                                final Object o14 = preserve_envelope;
+│                                  preserve_envelope = null;
+│ -                                if (o15 != null) {
+│ -                                    if (o15 != Boolean.FALSE) {
+│ -                                        final Object o16 = envelope;
+│ +                                if (o14 != null) {
+│ +                                    if (o14 != Boolean.FALSE) {
+│ +                                        final Object o15 = envelope;
+│                                          envelope = null;
+│ -                                        return o16;
+│ +                                        return o15;
+│                                      }
+│                                  }
+│ -                                final Object o17 = envelope;
+│ +                                final Object o16 = envelope;
+│                                  envelope = null;
+│ -                                Object map__12630 = o17;
+│ +                                Object map__12630 = o16;
+│                                  final Object invokeStatic6 = core$seq_QMARK___5492.invokeStatic(map__12630);
+│ -                                Object o18 = null;
+│ +                                Object o17 = null;
+│                                  Label_0794: {
+│                                      if (invokeStatic6 != null) {
+│                                          if (invokeStatic6 != Boolean.FALSE) {
+│                                              final Object invokeStatic7 = core$next__5472.invokeStatic(map__12630);
+│                                              Label_0785: {
+│                                                  if (invokeStatic7 != null) {
+│                                                      if (invokeStatic7 != Boolean.FALSE) {
+│                                                          final Object coll4 = map__12630;
+│                                                          map__12630 = null;
+│ -                                                        o18 = PersistentArrayMap.createAsIfByAssoc((Object[])core$to_array.invokeStatic(coll4));
+│ +                                                        o17 = PersistentArrayMap.createAsIfByAssoc((Object[])core$to_array.invokeStatic(coll4));
+│                                                          break Label_0785;
+│                                                      }
+│                                                  }
+│                                                  final Object invokeStatic8 = core$seq__5488.invokeStatic(map__12630);
+│                                                  if (invokeStatic8 != null) {
+│                                                      if (invokeStatic8 != Boolean.FALSE) {
+│                                                          final Object coll5 = map__12630;
+│                                                          map__12630 = null;
+│ -                                                        o18 = core$first__5470.invokeStatic(coll5);
+│ +                                                        o17 = core$first__5470.invokeStatic(coll5);
+│                                                          break Label_0785;
+│                                                      }
+│                                                  }
+│ -                                                o18 = PersistentArrayMap.EMPTY;
+│ +                                                o17 = PersistentArrayMap.EMPTY;
+│                                              }
+│                                              break Label_0794;
+│                                          }
+│                                      }
+│ -                                    o18 = map__12630;
+│ +                                    o17 = map__12630;
+│                                      map__12630 = null;
+│                                  }
+│ -                                Object map__12631 = o18;
+│ +                                Object map__12631 = o17;
+│                                  Object tag = RT.get(map__12631, interop$invoke_tool.const__33);
+│                                  final Object coll6 = map__12631;
+│                                  map__12631 = null;
+│                                  final Object value5;
+│                                  Object val = value5 = RT.get(coll6, interop$invoke_tool.const__34);
+│                                  val = null;
+│                                  Object parsed_val = edn$read_string.invokeStatic(value5);
+│                                  final Keyword const__36 = interop$invoke_tool.const__36;
+│                                  final Object k2 = tag;
+│                                  tag = null;
+│                                  if (!Util.equiv(const__36, k2)) {
+│                                      final ILookupThunk _thunk__2__ = interop$invoke_tool.__thunk__2__;
+│ -                                    final Object o19 = parsed_val;
+│ -                                    Object o20;
+│ -                                    if (_thunk__2__ == (o20 = _thunk__2__.get(o19))) {
+│ -                                        o20 = (interop$invoke_tool.__thunk__2__ = interop$invoke_tool.__site__2__.fault(o19)).get(o19);
+│ +                                    final Object o18 = parsed_val;
+│ +                                    Object o19;
+│ +                                    if (_thunk__2__ == (o19 = _thunk__2__.get(o18))) {
+│ +                                        o19 = (interop$invoke_tool.__thunk__2__ = interop$invoke_tool.__site__2__.fault(o18)).get(o18);
+│                                      }
+│ -                                    final Object o21 = parsed_val;
+│ +                                    final Object o20 = parsed_val;
+│                                      parsed_val = null;
+│ -                                    final Object o22;
+│ -                                    Object or__5602__auto__12643 = o22 = o21;
+│ -                                    if (o22 != null) {
+│ -                                        if (o22 != Boolean.FALSE) {
+│ +                                    final Object o21;
+│ +                                    Object or__5602__auto__12643 = o21 = o20;
+│ +                                    if (o21 != null) {
+│ +                                        if (o21 != Boolean.FALSE) {
+│                                              final Object empty = or__5602__auto__12643;
+│                                              or__5602__auto__12643 = null;
+│ -                                            throw (Throwable)core$ex_info.invokeStatic(o20, empty);
+│ +                                            throw (Throwable)core$ex_info.invokeStatic(o19, empty);
+│                                          }
+│                                      }
+│                                      final Object empty = PersistentArrayMap.EMPTY;
+│ -                                    throw (Throwable)core$ex_info.invokeStatic(o20, empty);
+│ +                                    throw (Throwable)core$ex_info.invokeStatic(o19, empty);
+│                                  }
+│ -                                final Object o16 = parsed_val;
+│ +                                final Object o15 = parsed_val;
+│                                  parsed_val = null;
+│ -                                return o16;
+│ +                                return o15;
+│                              }
+│                          }
+│                          final IFn fn3 = (IFn)interop$invoke_tool.const__32.getRawRoot();
+│ -                        final Object o23 = err;
+│ +                        final Object o22 = err;
+│                          err = null;
+│ -                        Object err_str = fn3.invoke(o23);
+│ -                        Object o24;
+│ +                        Object err_str = fn3.invoke(o22);
+│ +                        Object o23;
+│                          if (Util.equiv("", err_str)) {
+│ -                            o24 = "Unknown error invoking Clojure CLI";
+│ +                            o23 = "Unknown error invoking Clojure CLI";
+│                          }
+│                          else {
+│ -                            o24 = err_str;
+│ +                            o23 = err_str;
+│                              err_str = null;
+│                          }
+│                          final Object msg;
+│ -                        Object err_msg = msg = o24;
+│ +                        Object err_msg = msg = o23;
+│                          err_msg = null;
+│                          final Object[] init = new Object[4];
+│                          init[0] = interop$invoke_tool.const__38;
+│                          final int n2 = 1;
+│                          final String separator = " ";
+│                          final Object coll7 = command_strs;
+│                          command_strs = null;
+│ @@ -308,32 +307,32 @@
+│                          final Object coll8 = args2;
+│                          args2 = null;
+│                          init[n3] = string$join.invokeStatic(separator2, coll8);
+│                          throw (Throwable)core$ex_info.invokeStatic(msg, RT.mapUniqueKeys(init));
+│                      }
+│                  }
+│                  final Object invokeStatic9 = core$str.invokeStatic(":fn should be a symbol ", ArraySeq.create(fn));
+│ -                final Object o25;
+│ -                Object or__5602__auto__12644 = o25 = opts;
+│ -                if (o25 != null) {
+│ -                    if (o25 != Boolean.FALSE) {
+│ +                final Object o24;
+│ +                Object or__5602__auto__12644 = o24 = opts;
+│ +                if (o24 != null) {
+│ +                    if (o24 != Boolean.FALSE) {
+│                          final Object empty2 = or__5602__auto__12644;
+│                          or__5602__auto__12644 = null;
+│                          throw (Throwable)core$ex_info.invokeStatic(invokeStatic9, empty2);
+│                      }
+│                  }
+│                  final Object empty2 = PersistentArrayMap.EMPTY;
+│                  throw (Throwable)core$ex_info.invokeStatic(invokeStatic9, empty2);
+│              }
+│          }
+│          final String s = "Either :tool-alias or :tool-name must be provided";
+│ -        final Object o26;
+│ -        Object or__5602__auto__12645 = o26 = opts;
+│ -        if (o26 != null) {
+│ -            if (o26 != Boolean.FALSE) {
+│ +        final Object o25;
+│ +        Object or__5602__auto__12645 = o25 = opts;
+│ +        if (o25 != null) {
+│ +            if (o25 != Boolean.FALSE) {
+│                  final Object empty3 = or__5602__auto__12645;
+│                  or__5602__auto__12645 = null;
+│                  throw (Throwable)core$ex_info.invokeStatic(s, empty3);
+│              }
+│          }
+│          final Object empty3 = PersistentArrayMap.EMPTY;
+│          throw (Throwable)core$ex_info.invokeStatic(s, empty3);

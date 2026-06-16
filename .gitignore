@@ -9,3 +9,4 @@ maven-classpath.properties
 *.iml
 original
 rebuild
+*.diff

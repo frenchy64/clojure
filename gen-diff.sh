@@ -17,15 +17,26 @@ CLASSIFIER=""
 #CLASSIFIER="-slim"
 
 pushd original
-unzip clojure-1.12.5$CLASSIFIER.jar -d clojure-1.12.5$CLASSIFIER
+unzip -l clojure-1.12.5.jar > clojure-1.12.5.list
+unzip clojure-1.12.5.jar -d clojure-1.12.5
 popd
 pushd rebuild
-unzip clojure-1.12.5$CLASSIFIER.jar -d clojure-1.12.5$CLASSIFIER
+unzip -l clojure-1.12.5.jar > clojure-1.12.5.list
+unzip clojure-1.12.5.jar -d clojure-1.12.5
 popd
+diffoscope original/clojure-1.12.5.list rebuild/clojure-1.12.5.list > jar-listing.diff
 # raw bytecode diff (procyon not on PATH, defaults to bytecode)
-diffoscope original/clojure-1.12.5$CLASSIFIER/clojure/lang/Var.class rebuild/clojure-1.12.5$CLASSIFIER/clojure/lang/Var.class > var.class.raw.diff
+diffoscope original/clojure-1.12.5/clojure/lang/Var.class rebuild/clojure-1.12.5/clojure/lang/Var.class > var.class.raw.diff
 # decompiled
-PATH="$PATH:bin" diffoscope original/clojure-1.12.5$CLASSIFIER/clojure/lang/Var.class rebuild/clojure-1.12.5$CLASSIFIER/clojure/lang/Var.class > var.class.diff
-javap -c original/clojure-1.12.5$CLASSIFIER/clojure/lang/Var.class > original/clojure-1.12.5$CLASSIFIER/clojure/lang/Var.class.javap
-javap -c rebuild/clojure-1.12.5$CLASSIFIER/clojure/lang/Var.class > rebuild/clojure-1.12.5$CLASSIFIER/clojure/lang/Var.class.javap
-diffoscope original/clojure-1.12.5$CLASSIFIER/clojure/lang/Var.class.javap rebuild/clojure-1.12.5$CLASSIFIER/clojure/lang/Var.class.javap > var.javap.diff
+PATH="$PATH:bin" diffoscope original/clojure-1.12.5/clojure/lang/Var.class rebuild/clojure-1.12.5/clojure/lang/Var.class > var.class.procyon.diff
+javap -c original/clojure-1.12.5/clojure/lang/Var.class > original/clojure-1.12.5/clojure/lang/Var.class.javap
+javap -c rebuild/clojure-1.12.5/clojure/lang/Var.class > rebuild/clojure-1.12.5/clojure/lang/Var.class.javap
+diffoscope original/clojure-1.12.5/clojure/lang/Var.class.javap rebuild/clojure-1.12.5/clojure/lang/Var.class.javap > var.javap.diff
+
+# raw bytecode diff (procyon not on PATH, defaults to bytecode)
+diffoscope original/clojure-1.12.5/clojure/tools/deps/interop\$invoke_tool.class rebuild/clojure-1.12.5/clojure/tools/deps/interop\$invoke_tool.class > invoke_tool.raw.diff
+# decompiled
+PATH="$PATH:bin" diffoscope original/clojure-1.12.5/clojure/tools/deps/interop\$invoke_tool.class rebuild/clojure-1.12.5/clojure/tools/deps/interop\$invoke_tool.class > invoke_tool.procyon.diff
+javap -c original/clojure-1.12.5/clojure/tools/deps/interop\$invoke_tool.class > original/clojure-1.12.5/clojure/tools/deps/interop\$invoke_tool.class.javap
+javap -c rebuild/clojure-1.12.5/clojure/tools/deps/interop\$invoke_tool.class > rebuild/clojure-1.12.5/clojure/tools/deps/interop\$invoke_tool.class.javap
+diffoscope original/clojure-1.12.5/clojure/tools/deps/interop\$invoke_tool.class.javap rebuild/clojure-1.12.5/clojure/tools/deps/interop\$invoke_tool.class.javap > invoke_tool.javap.diff

@@ -27,3 +27,4 @@ jobs:
         cache: 'maven'
     - name: Build with Maven
       run: mvn -ntp -B -P${{ matrix.profile }} clean test
+    - run: ./verify-reproducible.sh

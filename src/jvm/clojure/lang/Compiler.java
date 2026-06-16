@@ -8113,6 +8113,7 @@ static void closeOver(LocalBinding b, ObjMethod method){
         LocalBinding lb = (LocalBinding) RT.get(method.locals, b);
 		if(lb == null)
 			{
+			//FIXME preserve PersistentArrayMap
 			method.objx.closes = (IPersistentMap) RT.assoc(method.objx.closes, b, b);
 			closeOver(b, method.parent);
 			}

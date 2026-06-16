@@ -1,0 +1,25 @@
+--- original/clojure-1.12.5/clojure/tools/deps/interop$invoke_tool.class.javap
++++ rebuild/clojure-1.12.5/clojure/tools/deps/interop$invoke_tool.class.javap
+@@ -356,18 +356,18 @@
+      599: aastore
+      600: invokestatic  #94                 // Method clojure/lang/ArraySeq.create:([Ljava/lang/Object;)Lclojure/lang/ArraySeq;
+      603: invokestatic  #203                // Method clojure/core$hash_map.invokeStatic:(Lclojure/lang/ISeq;)Ljava/lang/Object;
+      606: invokestatic  #206                // Method clojure/core$push_thread_bindings.invokeStatic:(Ljava/lang/Object;)Ljava/lang/Object;
+      609: pop
+      610: new           #208                // class clojure/tools/deps/interop$invoke_tool$fn__12629
+      613: dup
+-     614: aload         9
+-     616: aload         12
+-     618: aconst_null
+-     619: astore        12
++     614: aload         12
++     616: aconst_null
++     617: astore        12
++     619: aload         9
+      621: invokespecial #211                // Method clojure/tools/deps/interop$invoke_tool$fn__12629."<init>":(Ljava/lang/Object;Ljava/lang/Object;)V
+      624: checkcast     #213                // class clojure/lang/IFn
+      627: invokeinterface #216,  1          // InterfaceMethod clojure/lang/IFn.invoke:()Ljava/lang/Object;
+      632: pop
+      633: getstatic     #219                // Field const__32:Lclojure/lang/Var;
+      636: invokevirtual #173                // Method clojure/lang/Var.getRawRoot:()Ljava/lang/Object;
+      639: checkcast     #213                // class clojure/lang/IFn

@@ -8120,7 +8120,7 @@ static void closeOver(LocalBinding b, ObjMethod method){
 			else
 				{
 				// reconstruct array map to preserve order
-				Object[] closesvec = new Object[2 + newCloses.count()*2];
+				Object[] closesvec = new Object[2 + oldCloses.count()*2];
 				int i=0;
 				for(ISeq s = RT.seq(oldCloses);s!=null;s = s.next())
 					{

@@ -13,6 +13,7 @@
   (:import (clojure.lang Compiler Compiler$CompilerException))
   (:require [clojure.test.generative :refer (defspec)]
             [clojure.data.generators :as gen]
+            [clojure.test-clojure.compilation.closure :as closure]
             [clojure.test-clojure.compilation.line-number-examples :as line])
   (:use clojure.test
         [clojure.test-helper :only (should-not-reflect should-print-err-message)]))
@@ -451,3 +452,13 @@
       (meta ^:foo (reify clojure.lang.ILookup)) #{:foo}
       (meta (macroexpand-1 '(reify clojure.lang.ILookup))) #{:line :column}
       (meta (macroexpand-1 '^:foo (reify clojure.lang.ILookup))) #{:line :column :foo})))
+
+(deftest test-closed-over-locals-order
+  (let [class-reader (-> closure/closure class .getName clojure.asm.ClassReader.)
+        field-order (atom [])
+        method-visitor (proxy [clojure.asm.ClassVisitor] [clojure.asm.Opcodes/ASM4 nil]
+                         (visitField [access name descriptor signature value]
+                           (swap! field-order conj name)
+                           nil))]
+    (.accept class-reader method-visitor 0)
+    (is (= ["a" "b" "c" "d"] @field-order))))

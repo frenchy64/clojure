@@ -9,7 +9,9 @@
 ; Author: Ambrose Bonnaire-Sergeant
 
 (ns clojure.test-clojure.fn
-  (:use clojure.test))
+  (:use clojure.test)
+  ;; for `fails-with-cause?`
+  (:require clojure.test-helper))
 
 (deftest fn-error-checking
   (testing "bad arglist"
@@ -53,3 +55,28 @@
     (is (fails-with-cause? clojure.lang.ExceptionInfo
           #"Call to clojure.core/fn did not conform to spec"
           (eval '(fn))))))
+
+(defmacro fn-nargs [nargs] `(fn ~(mapv #(symbol (str "arg" (inc %))) (range nargs))))
+
+(deftest fn-arity-exception-test
+  ;; examples: 20 param function with too many args
+  (is (thrown-with-msg? clojure.lang.ArityException
+                        #"Wrong number of args \(21\) passed to:.*"
+                        (apply (fn-nargs 20) (range 21))))
+  (is (thrown-with-msg? clojure.lang.ArityException #"Wrong number of args \(22\) passed to:.*"
+                        (apply (fn-nargs 20) (range 22))))
+  (is (thrown-with-msg? clojure.lang.ArityException
+                        #"Wrong number of args \(23\) passed to:.*"
+                        (apply (fn-nargs 20) (range 23))))
+  ;; generalize the above.
+  ;; 0-20 param functions X 0-30 args (except the one case that will work)
+  (let [max-fixed-args 20]
+    (doseq [nargs (range (inc max-fixed-args))
+            :let [f (eval `(fn-nargs ~nargs))]
+            i (range 31) ;; call with 0-30 arguments...
+            :when (not= i nargs) ;; ...but skip the arity the function defines
+            :let [re (re-pattern (format "Wrong number of args \\(%s\\) passed to:.*" i))]]
+      (testing [nargs i (pr-str re)]
+        (is (thrown-with-msg? clojure.lang.ArityException
+                              re
+                              (apply f (range i))))))))

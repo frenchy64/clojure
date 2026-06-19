@@ -1,0 +1,45 @@
+Compiled from "closure.clj"
+public final class clojure.test_clojure.compilation.closure$fn__410$closure__411 extends clojure.lang.AFunction {
+  java.lang.Object b;
+
+  java.lang.Object a;
+
+  java.lang.Object d;
+
+  java.lang.Object c;
+
+  public clojure.test_clojure.compilation.closure$fn__410$closure__411(java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object);
+    Code:
+       0: aload_0
+       1: invokespecial #15                 // Method clojure/lang/AFunction."<init>":()V
+       4: aload_0
+       5: aload_1
+       6: putfield      #17                 // Field b:Ljava/lang/Object;
+       9: aload_0
+      10: aload_2
+      11: putfield      #19                 // Field a:Ljava/lang/Object;
+      14: aload_0
+      15: aload_3
+      16: putfield      #21                 // Field d:Ljava/lang/Object;
+      19: aload_0
+      20: aload         4
+      22: putfield      #23                 // Field c:Ljava/lang/Object;
+      25: return
+
+  public java.lang.Object invoke();
+    Code:
+       0: aload_0
+       1: getfield      #19                 // Field a:Ljava/lang/Object;
+       4: aload_0
+       5: getfield      #17                 // Field b:Ljava/lang/Object;
+       8: aload_0
+       9: getfield      #23                 // Field c:Ljava/lang/Object;
+      12: aload_0
+      13: getfield      #21                 // Field d:Ljava/lang/Object;
+      16: invokestatic  #31                 // Method clojure/lang/Tuple.create:(Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;)Lclojure/lang/IPersistentVector;
+      19: areturn
+
+  public static {};
+    Code:
+       0: return
+}

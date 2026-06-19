@@ -1,0 +1,91 @@
+From fe9d1991eaaedcfaa948690b5a6652eda4e3aafa Mon Sep 17 00:00:00 2001
+From: Ambrose Bonnaire-Sergeant <ambrose@ambrosebs.com>
+Date: Thu, 18 Jun 2026 16:40:26 -0700
+Subject: [PATCH] add failing test for locals order
+
+---
+ build.xml                                         |  1 +
+ test/clojure/test_clojure/compilation.clj         | 11 +++++++++++
+ test/clojure/test_clojure/compilation/closure.clj |  7 +++++++
+ 3 files changed, 19 insertions(+)
+ create mode 100644 test/clojure/test_clojure/compilation/closure.clj
+
+diff --git a/build.xml b/build.xml
+index 1464b69e..e8bbb667 100644
+--- a/build.xml
++++ b/build.xml
+@@ -108,16 +108,17 @@
+       <sysproperty key="clojure.compile.path" value="${test-classes}"/>
+         <!--<sysproperty key="clojure.compiler.elide-meta" value="[:doc]"/>-->
+         <!--<sysproperty key="clojure.compiler.disable-locals-clearing" value="true"/>-->
+       <sysproperty key="clojure.compiler.direct-linking" value="${directlinking}"/>
+       <arg value="clojure.test-clojure.protocols.examples"/>
+       <arg value="clojure.test-clojure.proxy.examples"/>
+       <arg value="clojure.test-clojure.genclass.examples"/>
+       <arg value="clojure.test-clojure.compilation.load-ns"/>
++      <arg value="clojure.test-clojure.compilation.closure"/>
+       <arg value="clojure.test-clojure.annotations"/>
+     </java>
+   </target>
+ 
+   <target name="test-example"
+           description="Run clojure tests without recompiling clojure."
+           depends="compile-tests"
+           unless="maven.test.skip">
+diff --git a/test/clojure/test_clojure/compilation.clj b/test/clojure/test_clojure/compilation.clj
+index 61c69056..1f66d7e8 100644
+--- a/test/clojure/test_clojure/compilation.clj
++++ b/test/clojure/test_clojure/compilation.clj
+@@ -8,16 +8,17 @@
+ 
+ ; Author: Frantisek Sodomka
+ 
+ 
+ (ns clojure.test-clojure.compilation
+   (:import (clojure.lang Compiler Compiler$CompilerException))
+   (:require [clojure.test.generative :refer (defspec)]
+             [clojure.data.generators :as gen]
++            [clojure.test-clojure.compilation.closure :as closure]
+             [clojure.test-clojure.compilation.line-number-examples :as line])
+   (:use clojure.test
+         [clojure.test-helper :only (should-not-reflect should-print-err-message)]))
+ 
+ ; http://clojure.org/compilation
+ 
+ ; compile
+ ; gen-class, gen-interface
+@@ -446,8 +447,18 @@
+ 
+ (deftest CLJ-2945
+   (testing "CLJ-2945 Reify form and obj meta"
+     (are [m x]  (= (set (keys m)) x)
+       (meta (reify clojure.lang.ILookup)) #{}
+       (meta ^:foo (reify clojure.lang.ILookup)) #{:foo}
+       (meta (macroexpand-1 '(reify clojure.lang.ILookup))) #{:line :column}
+       (meta (macroexpand-1 '^:foo (reify clojure.lang.ILookup))) #{:line :column :foo})))
++
++(deftest test-closed-over-locals-order
++  (let [class-reader (-> closure/closure class .getName clojure.asm.ClassReader.)
++        field-order (atom [])
++        method-visitor (proxy [clojure.asm.ClassVisitor] [clojure.asm.Opcodes/ASM4 nil]
++                         (visitField [access name descriptor signature value]
++                           (swap! field-order conj name)
++                           nil))]
++    (.accept class-reader method-visitor 0)
++    (is (= ["a" "b" "c" "d"] @field-order))))
+diff --git a/test/clojure/test_clojure/compilation/closure.clj b/test/clojure/test_clojure/compilation/closure.clj
+new file mode 100644
+index 00000000..3ce87bf0
+--- /dev/null
++++ b/test/clojure/test_clojure/compilation/closure.clj
+@@ -0,0 +1,7 @@
++(ns clojure.test-clojure.compilation.closure)
++
++(let [a "a"
++      b "b"
++      c "c"
++      d "d"]
++  (defn closure [] [a b c d]))
+-- 
+2.54.0
+

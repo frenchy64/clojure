@@ -4737,7 +4737,7 @@ static public class ObjExpr implements Expr{
 	Type objtype;
 	public final Object tag;
 	//localbinding->itself
-	IPersistentMap closes = PersistentHashMap.EMPTY;
+	IPersistentMap closes = PersistentArrayMap.EMPTY; // just for bytecode reproducibility, not part of syntax quote optimization
     //localbndingexprs
     IPersistentVector closesExprs = PersistentVector.EMPTY;
 	//symbols

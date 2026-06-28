@@ -17,6 +17,7 @@ jobs:
         distribution: ["temurin", "corretto"]
         profile: ["test-direct", "test-no-direct"]
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
     steps:
     - uses: actions/checkout@v4
     - name: Set up Java

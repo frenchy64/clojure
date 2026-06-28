@@ -37,7 +37,7 @@
     <directlinking>true</directlinking>
     <optimizeSyntaxQuote>false</optimizeSyntaxQuote>
     <!-- just for reproducibility, not part of syntax-quote optimization -->
-    <project.build.outputTimeStamp>2026-01-01T00:00:00Z</project.build.outputTimeStamp>
+    <project.build.outputTimestamp>2026-01-01T00:00:00Z</project.build.outputTimestamp>
   </properties>
 
   <dependencies>

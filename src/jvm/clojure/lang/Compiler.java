@@ -4737,7 +4737,7 @@ static public class ObjExpr implements Expr{
 	Type objtype;
 	public final Object tag;
 	//localbinding->itself
-	IPersistentMap closes = PersistentArrayMap.EMPTY; // just for bytecode reproducibility, not part of syntax quote optimization
+	IPersistentMap closes = PersistentArrayMap.EMPTY;
     //localbndingexprs
     IPersistentVector closesExprs = PersistentVector.EMPTY;
 	//symbols
@@ -8113,7 +8113,25 @@ static void closeOver(LocalBinding b, ObjMethod method){
         LocalBinding lb = (LocalBinding) RT.get(method.locals, b);
 		if(lb == null)
 			{
-			method.objx.closes = (IPersistentMap) RT.assoc(method.objx.closes, b, b);
+			final IPersistentMap oldCloses = method.objx.closes;
+			final IPersistentMap newCloses = (IPersistentMap)RT.assoc(oldCloses, b, b);
+			if(newCloses instanceof PersistentArrayMap)
+				method.objx.closes = newCloses;
+			else
+				{
+				// reconstruct array map to preserve order
+				Object[] closesvec = new Object[2 + oldCloses.count()*2];
+				int i=0;
+				for(ISeq s = RT.seq(oldCloses);s!=null;s = s.next())
+					{
+					IMapEntry e = (IMapEntry) s.first();
+					closesvec[i++] = e.key();
+					closesvec[i++] = e.val();
+					}
+				closesvec[i++] = b;
+				closesvec[i++] = b;
+				method.objx.closes = PersistentArrayMap.createAsIfByAssoc(closesvec);
+				}
 			closeOver(b, method.parent);
 			}
 		else {

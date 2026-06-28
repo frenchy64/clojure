@@ -51,6 +51,7 @@ static Symbol LIST = Symbol.intern("clojure.core", "list");
 static Symbol APPLY = Symbol.intern("clojure.core", "apply");
 static Symbol HASHMAP = Symbol.intern("clojure.core", "hash-map");
 static Symbol HASHSET = Symbol.intern("clojure.core", "hash-set");
+static Symbol VEC = Symbol.intern("clojure.core", "vec");
 static Symbol VECTOR = Symbol.intern("clojure.core", "vector");
 static Symbol WITH_META = Symbol.intern("clojure.core", "with-meta");
 static Symbol META = Symbol.intern("clojure.core", "meta");
@@ -1092,57 +1093,28 @@ public static class SyntaxQuoteReader extends AFn{
 				ret = form;
 			else if(form instanceof IPersistentMap)
 				{
-				ISeq keyvals = flattenMap(form).seq();
-				if(!"false".equals(System.getProperty("clojure.optimizeSyntaxQuote")) && !hasSplice(keyvals))
-					{
-					PersistentVector vec = PersistentVector.EMPTY;
-					for(; keyvals != null; keyvals = keyvals.next())
-						vec = vec.cons(syntaxQuote(keyvals.first()));
-					ret = RT.cons(HASHMAP, vec);
-					}
-				else
-					ret = RT.list(APPLY, HASHMAP, RT.list(SEQ, RT.cons(CONCAT, sqExpandList(keyvals))));
+				IPersistentVector keyvals = flattenMap(form);
+				ret = RT.list(APPLY, HASHMAP, RT.list(SEQ, RT.cons(CONCAT, sqExpandList(keyvals.seq()))));
 				}
 			else if(form instanceof IPersistentVector)
 				{
 				ISeq seq = ((IPersistentVector) form).seq();
 				// `[~@a ...] => (apply vector (seq (concat ~@a ...)))
-				if("false".equals(System.getProperty("clojure.optimizeSyntaxQuote")) || hasSplice(seq))
+				if("false".equals(System.getProperty("clojure.optimizeSyntaxQuote")))
 					ret = RT.list(APPLY, VECTOR, RT.list(SEQ, RT.cons(CONCAT, sqExpandList(seq))));
-				// `[a ...] => [`a ...]
+				// `[~@a ...] => (vec (seq (concat ~@a ...)))
 				else
-					{
-					PersistentVector vec = PersistentVector.EMPTY;
-					for(; seq != null; seq = seq.next())
-						vec = vec.cons(syntaxQuote(seq.first()));
-					ret = RT.cons(VECTOR, vec);
-					}
+					ret = RT.list(VEC, RT.list(SEQ, RT.cons(CONCAT, sqExpandList(seq))));
 				}
 			else if(form instanceof IPersistentSet)
 				{
-				ISeq seq = ((IPersistentSet) form).seq();
-				if("false".equals(System.getProperty("clojure.optimizeSyntaxQuote")) || hasSplice(seq))
-					ret = RT.list(APPLY, HASHSET, RT.list(SEQ, RT.cons(CONCAT, sqExpandList(seq))));
-				else
-					{
-					PersistentVector vec = PersistentVector.EMPTY;
-					for(; seq != null; seq = seq.next())
-						vec = vec.cons(syntaxQuote(seq.first()));
-					ret = RT.cons(HASHSET, vec);
-					}
+				ret = RT.list(APPLY, HASHSET, RT.list(SEQ, RT.cons(CONCAT, sqExpandList(((IPersistentSet) form).seq()))));
 				}
 			else if(form instanceof ISeq || form instanceof IPersistentList)
 				{
 				ISeq seq = RT.seq(form);
 				if(seq == null)
 					ret = RT.cons(LIST,null);
-				else if(!"false".equals(System.getProperty("clojure.optimizeSyntaxQuote")) && !hasSplice(seq))
-					{
-					PersistentVector vec = PersistentVector.EMPTY;
-					for(; seq != null; seq = seq.next())
-						vec = vec.cons(syntaxQuote(seq.first()));
-					ret = RT.cons(LIST, vec);
-					}
 				else
 					ret = RT.list(SEQ, RT.cons(CONCAT, sqExpandList(seq)));
 				}
@@ -1165,15 +1137,6 @@ public static class SyntaxQuoteReader extends AFn{
 				return RT.list(WITH_META, ret, syntaxQuote(((IObj) form).meta()));
 			}
 		return ret;
-	}
-
-	private static boolean hasSplice(ISeq seq) {
-		for(; seq != null; seq = seq.next())
-			{
-			if(isUnquoteSplicing(seq.first()))
-				return true;
-			}
-		return false;
 	}
 
 	private static ISeq sqExpandList(ISeq seq) {

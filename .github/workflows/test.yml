@@ -28,4 +28,11 @@ jobs:
     - name: Build with Maven
       run: mvn -ntp -B -P${{ matrix.profile }} clean test
     - run: ./verify-reproducible.sh
+    - run: sudo apt-get update
+    - run: sudo apt-get install diffoscope
     - run: ./compare-optimization.sh
+    - uses: actions/upload-artifact@v7
+      with:
+        name: clojure-1.13.0-syntax-quotedvec.jar.diffoscope
+        path: clojure-1.13.0-syntax-quotedvec.jar.diffoscope
+        if-no-files-found: error

@@ -9,4 +9,6 @@ mvn clean verify artifact:compare -Dmaven.test.skip=true -PoptimizeSyntaxQuote
 set -e
 
 cat target/clojure-1.13.0-syntaxquotedvec.buildcompare
-diffoscope target/reference/org.clojure/clojure-1.13.0-syntaxquotedvec.jar target/clojure-1.13.0-syntaxquotedvec.jar
+diffoscope target/reference/org.clojure/clojure-1.13.0-syntaxquotedvec.jar target/clojure-1.13.0-syntaxquotedvec.jar > clojure-1.13.0-syntax-quotedvec.jar.diffoscope
+
+cat clojure-1.13.0-syntax-quotedvec.jar.diffoscope

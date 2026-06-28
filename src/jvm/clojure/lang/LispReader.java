@@ -1097,7 +1097,13 @@ public static class SyntaxQuoteReader extends AFn{
 				}
 			else if(form instanceof IPersistentVector)
 				{
-				ret = RT.list(APPLY, VECTOR, RT.list(SEQ, RT.cons(CONCAT, sqExpandList(((IPersistentVector) form).seq()))));
++				ISeq seq = ((IPersistentVector) form).seq();
+				// `[~@a ...] => (apply vector (seq (concat ~@a ...)))
+				if(hasSplice(seq))
+					ret = RT.list(APPLY, VECTOR, RT.list(SEQ, RT.cons(CONCAT, sqExpandList(((IPersistentVector) form).seq()))));
+				// `[a ...] => [`a ...]
+				else
+					ret = LazilyPersistentVector.create(sqExpandList(seq));
 				}
 			else if(form instanceof IPersistentSet)
 				{
@@ -1130,6 +1136,16 @@ public static class SyntaxQuoteReader extends AFn{
 				return RT.list(WITH_META, ret, syntaxQuote(((IObj) form).meta()));
 			}
 		return ret;
+	}
+
+	// returns true iff seq contains ~@
+	private static boolean hasSplice(ISeq seq) {
+		for(; seq != null; seq = seq.next())
+			{
+			if(isUnquoteSplicing(seq.first()))
+				return true;
+			}
+		return false;
 	}
 
 	private static ISeq sqExpandList(ISeq seq) {

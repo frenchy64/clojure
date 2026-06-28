@@ -105,3 +105,8 @@
     (defn foo
       [{:keys [^String s]}]
       (.indexOf s "boo"))))
+
+(deftest syntax-quoted-vector-test
+  (is (vector? '`[]))
+  (is (vector? '`[a b c]))
+  (is (not (vector? '`[~@a b c]))))

@@ -1143,7 +1143,6 @@ public static class SyntaxQuoteReader extends AFn{
 		return ret;
 	}
 
-	// returns true iff seq contains ~@
 	private static boolean hasSplice(ISeq seq) {
 		for(; seq != null; seq = seq.next())
 			{

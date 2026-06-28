@@ -36,4 +36,7 @@ jobs:
       with:
         name: clojure-1.13.0-syntax-quotedvec.jar.diffoscope
         path: clojure-1.13.0-syntax-quotedvec.jar.diffoscope
-        if-no-files-found: error
+    - uses: actions/upload-artifact@v7
+      with:
+        name: clojure-1.13.0-syntax-quotedvec.dir.diffoscope
+        path: clojure-1.13.0-syntax-quotedvec.dir.diffoscope

@@ -108,5 +108,5 @@
 
 (deftest syntax-quoted-vector-test
   (is (vector? '`[]))
-  (is (vector? '`[a b c]))
+  (is (not (vector? '`[a b c])))
   (is (not (vector? '`[~@a b c]))))

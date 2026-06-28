@@ -1097,10 +1097,10 @@ public static class SyntaxQuoteReader extends AFn{
 				}
 			else if(form instanceof IPersistentVector)
 				{
-+				ISeq seq = ((IPersistentVector) form).seq();
+				ISeq seq = ((IPersistentVector) form).seq();
 				// `[~@a ...] => (apply vector (seq (concat ~@a ...)))
 				if(hasSplice(seq))
-					ret = RT.list(APPLY, VECTOR, RT.list(SEQ, RT.cons(CONCAT, sqExpandList(((IPersistentVector) form).seq()))));
+					ret = RT.list(APPLY, VECTOR, RT.list(SEQ, RT.cons(CONCAT, sqExpandList(seq))));
 				// `[a ...] => [`a ...]
 				else
 					ret = LazilyPersistentVector.create(sqExpandList(seq));

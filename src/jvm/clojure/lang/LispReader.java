@@ -1099,7 +1099,7 @@ public static class SyntaxQuoteReader extends AFn{
 				{
 				ISeq seq = ((IPersistentVector) form).seq();
 				// `[~@a ...] => (apply vector (seq (concat ~@a ...)))
-				if(System.getProperty("clojure.disable-splice-optimization") != null || hasSplice(seq))
+				if("false".equals(System.getProperty("clojure.optimizeSyntaxQuote")) || hasSplice(seq))
 					ret = RT.list(APPLY, VECTOR, RT.list(SEQ, RT.cons(CONCAT, sqExpandList(seq))));
 				// `[a ...] => [`a ...]
 				else

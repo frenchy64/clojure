@@ -1103,7 +1103,12 @@ public static class SyntaxQuoteReader extends AFn{
 					ret = RT.list(APPLY, VECTOR, RT.list(SEQ, RT.cons(CONCAT, sqExpandList(seq))));
 				// `[a ...] => [`a ...]
 				else
-					ret = LazilyPersistentVector.create(sqExpandList(seq));
+					{
+					PersistentVector vec = PersistentVector.EMPTY;
+					for(; seq != null; seq = seq.next())
+						vec = vec.cons(syntaxQuote(seq.first()));
+					ret = vec;
+					}
 				}
 			else if(form instanceof IPersistentSet)
 				{

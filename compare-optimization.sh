@@ -21,19 +21,9 @@ mkdir -p "$REFDIR" "$OPTIMDIR"
 unzip -q target/reference/org.clojure/clojure-1.13.0-syntaxquotedvec.jar -d "$REFDIR"
 unzip -q target/clojure-1.13.0-syntaxquotedvec.jar -d "$OPTIMDIR"
 
-# Disassemble .class files: replace .class files with javap output files (with .java_disasm suffix)
-for DIR in "$REFDIR" "$OPTIMDIR"; do
-  find "$DIR" -name '*.class' -print0 | while IFS= read -r -d '' CLASSFILE; do
-    # compute class name from file path
-    RELPATH="${CLASSFILE#$DIR/}"
-    CLASSNAME="${RELPATH%.class}"
-    CLASSNAME="${CLASSNAME//\//.}"
-    # run javap and write to a .class.disasm file next to original
-    javap -c -p -classpath "$DIR" "$CLASSNAME" > "${CLASSFILE}.disasm" 2>/dev/null || javap -c -classpath "$DIR" "$CLASSNAME" > "${CLASSFILE}.disasm" 2>/dev/null || echo "failed to disassemble $CLASSFILE" > "${CLASSFILE}.disasm"
-    # remove original .class file
-    rm -f "$CLASSFILE"
-  done
-done
+# Disassemble .class files: replace .class files with javap output files (with .class.disasm suffix)
+# Use a small Python helper to handle class-name conversion and robust javap invocation
+python3 "$(dirname "$0")/disassemble_classes.py" "$REFDIR" "$OPTIMDIR"
 
 # Now run diffoscope on the two directories
 diffoscope "$REFDIR" "$OPTIMDIR" > clojure-1.13.0-syntax-quotedvec.dir.diffoscope || true

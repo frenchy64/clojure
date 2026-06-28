@@ -1092,16 +1092,22 @@ public static class SyntaxQuoteReader extends AFn{
 				ret = form;
 			else if(form instanceof IPersistentMap)
 				{
-				IPersistentVector keyvals = flattenMap(form);
-				ret = RT.list(APPLY, HASHMAP, RT.list(SEQ, RT.cons(CONCAT, sqExpandList(keyvals.seq()))));
+				ISeq keyvals = flattenMap(form).seq();
+				if(!"false".equals(System.getProperty("clojure.optimizeSyntaxQuote")) && !hasSplice(keyvals))
+					{
+					PersistentVector vec = PersistentVector.EMPTY;
+					for(; keyvals != null; keyvals = keyvals.next())
+						vec = vec.cons(syntaxQuote(keyvals.first()));
+					ret = RT.cons(HASHMAP, vec);
+					}
+				else
+					ret = RT.list(APPLY, HASHMAP, RT.list(SEQ, RT.cons(CONCAT, sqExpandList(keyvals))));
 				}
 			else if(form instanceof IPersistentVector)
 				{
 				ISeq seq = ((IPersistentVector) form).seq();
 				// `[~@a ...] => (apply vector (seq (concat ~@a ...)))
-				if("false".equals(System.getProperty("clojure.optimizeSyntaxQuote"))
-						//|| hasSplice(seq))
-						|| seq != null)
+				if("false".equals(System.getProperty("clojure.optimizeSyntaxQuote")) || hasSplice(seq))
 					ret = RT.list(APPLY, VECTOR, RT.list(SEQ, RT.cons(CONCAT, sqExpandList(seq))));
 				// `[a ...] => [`a ...]
 				else
@@ -1109,18 +1115,34 @@ public static class SyntaxQuoteReader extends AFn{
 					PersistentVector vec = PersistentVector.EMPTY;
 					for(; seq != null; seq = seq.next())
 						vec = vec.cons(syntaxQuote(seq.first()));
-					ret = vec;
+					ret = RT.cons(VECTOR, vec);
 					}
 				}
 			else if(form instanceof IPersistentSet)
 				{
-				ret = RT.list(APPLY, HASHSET, RT.list(SEQ, RT.cons(CONCAT, sqExpandList(((IPersistentSet) form).seq()))));
+				ISeq seq = ((IPersistentSet) form).seq();
+				if("false".equals(System.getProperty("clojure.optimizeSyntaxQuote")) || hasSplice(seq))
+					ret = RT.list(APPLY, HASHSET, RT.list(SEQ, RT.cons(CONCAT, sqExpandList(seq))));
+				else
+					{
+					PersistentVector vec = PersistentVector.EMPTY;
+					for(; seq != null; seq = seq.next())
+						vec = vec.cons(syntaxQuote(seq.first()));
+					ret = RT.cons(HASHSET, vec);
+					}
 				}
 			else if(form instanceof ISeq || form instanceof IPersistentList)
 				{
 				ISeq seq = RT.seq(form);
 				if(seq == null)
 					ret = RT.cons(LIST,null);
+				else if(!"false".equals(System.getProperty("clojure.optimizeSyntaxQuote")) && !hasSplice(seq))
+					{
+					PersistentVector vec = PersistentVector.EMPTY;
+					for(; seq != null; seq = seq.next())
+						vec = vec.cons(syntaxQuote(seq.first()));
+					ret = RT.cons(LIST, vec);
+					}
 				else
 					ret = RT.list(SEQ, RT.cons(CONCAT, sqExpandList(seq)));
 				}

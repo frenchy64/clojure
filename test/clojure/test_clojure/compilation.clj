@@ -457,6 +457,8 @@
 (deftest test-syntax-quoted-vector-static-initializer
   (let [class-reader (-> syntax-quote/syntax-quoted-vector class .getName clojure.asm.ClassReader.)
         fields (atom [])
+        method-opcode-mapping {clojure.asm.Opcodes/INVOKESTATIC :INVOKESTATIC
+                               clojure.asm.Opcodes/INVOKEDYNAMIC :INVOKEDYNAMIC}
         method-opcodes (atom #{})
         visitor (proxy [clojure.asm.ClassVisitor] [clojure.asm.Opcodes/ASM4 nil]
                   (visitField [access name descriptor signature value]
@@ -466,10 +468,10 @@
                     (when (= name "invokeStatic")
                       (proxy [clojure.asm.MethodVisitor] [clojure.asm.Opcodes/ASM4]
                         (visitMethodInsn [opcode owner name descriptor isInterface]
-                          (swap! method-opcodes conj opcode)
+                          (swap! method-opcodes conj (get method-opcode-mapping opcode opcode))
                           nil)))))]
     (.accept class-reader visitor 0)
     ;; if a var was not directly linkable, a statically initialized field would be added to the function
     (is (empty? @fields))
     ;; all method calls are static
-    (is (= #{clojure.asm.Opcodes/INVOKESTATIC} @method-opcodes))))
+    (is (= #{:INVOKESTATIC} @method-opcodes))))

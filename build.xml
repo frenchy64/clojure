@@ -113,6 +113,7 @@
       <arg value="clojure.test-clojure.proxy.examples"/>
       <arg value="clojure.test-clojure.genclass.examples"/>
       <arg value="clojure.test-clojure.compilation.load-ns"/>
+      <arg value="clojure.test-clojure.compilation.syntax-quote"/>
       <arg value="clojure.test-clojure.annotations"/>
     </java>
   </target>

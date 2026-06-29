@@ -1,0 +1,60 @@
+Compiled from "syntax_quote.clj"
+public final class clojure.test_clojure.compilation.syntax_quote$syntax_quoted_vector extends clojure.lang.AFunction {
+  public clojure.test_clojure.compilation.syntax_quote$syntax_quoted_vector();
+    Code:
+       0: aload_0
+       1: invokespecial #9                  // Method clojure/lang/AFunction."<init>":()V
+       4: return
+
+  public static java.lang.Object invokeStatic();
+    Code:
+       0: iconst_1
+       1: anewarray     #13                 // class java/lang/Object
+       4: dup
+       5: iconst_0
+       6: invokestatic  #17                 // Method clojure/core$concat.invokeStatic:()Ljava/lang/Object;
+       9: invokestatic  #22                 // Method clojure/core$seq__5511.invokeStatic:(Ljava/lang/Object;)Ljava/lang/Object;
+      12: invokestatic  #25                 // Method clojure/core$vec.invokeStatic:(Ljava/lang/Object;)Ljava/lang/Object;
+      15: aastore
+      16: invokestatic  #31                 // Method clojure/lang/ArraySeq.create:([Ljava/lang/Object;)Lclojure/lang/ArraySeq;
+      19: invokestatic  #36                 // Method clojure/lang/PersistentList$Primordial.invokeStatic:(Lclojure/lang/ISeq;)Ljava/lang/Object;
+      22: iconst_1
+      23: anewarray     #13                 // class java/lang/Object
+      26: dup
+      27: iconst_0
+      28: invokestatic  #17                 // Method clojure/core$concat.invokeStatic:()Ljava/lang/Object;
+      31: invokestatic  #22                 // Method clojure/core$seq__5511.invokeStatic:(Ljava/lang/Object;)Ljava/lang/Object;
+      34: invokestatic  #25                 // Method clojure/core$vec.invokeStatic:(Ljava/lang/Object;)Ljava/lang/Object;
+      37: aastore
+      38: invokestatic  #31                 // Method clojure/lang/ArraySeq.create:([Ljava/lang/Object;)Lclojure/lang/ArraySeq;
+      41: invokestatic  #36                 // Method clojure/lang/PersistentList$Primordial.invokeStatic:(Lclojure/lang/ISeq;)Ljava/lang/Object;
+      44: iconst_1
+      45: anewarray     #13                 // class java/lang/Object
+      48: dup
+      49: iconst_0
+      50: iconst_1
+      51: anewarray     #13                 // class java/lang/Object
+      54: dup
+      55: iconst_0
+      56: invokestatic  #17                 // Method clojure/core$concat.invokeStatic:()Ljava/lang/Object;
+      59: invokestatic  #22                 // Method clojure/core$seq__5511.invokeStatic:(Ljava/lang/Object;)Ljava/lang/Object;
+      62: invokestatic  #25                 // Method clojure/core$vec.invokeStatic:(Ljava/lang/Object;)Ljava/lang/Object;
+      65: aastore
+      66: invokestatic  #31                 // Method clojure/lang/ArraySeq.create:([Ljava/lang/Object;)Lclojure/lang/ArraySeq;
+      69: invokestatic  #36                 // Method clojure/lang/PersistentList$Primordial.invokeStatic:(Lclojure/lang/ISeq;)Ljava/lang/Object;
+      72: aastore
+      73: invokestatic  #31                 // Method clojure/lang/ArraySeq.create:([Ljava/lang/Object;)Lclojure/lang/ArraySeq;
+      76: invokestatic  #39                 // Method clojure/core$concat.invokeStatic:(Ljava/lang/Object;Ljava/lang/Object;Lclojure/lang/ISeq;)Ljava/lang/Object;
+      79: invokestatic  #22                 // Method clojure/core$seq__5511.invokeStatic:(Ljava/lang/Object;)Ljava/lang/Object;
+      82: invokestatic  #25                 // Method clojure/core$vec.invokeStatic:(Ljava/lang/Object;)Ljava/lang/Object;
+      85: areturn
+
+  public java.lang.Object invoke();
+    Code:
+       0: invokestatic  #41                 // Method invokeStatic:()Ljava/lang/Object;
+       3: areturn
+
+  public static {};
+    Code:
+       0: return
+}

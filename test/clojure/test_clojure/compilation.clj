@@ -457,10 +457,19 @@
 (deftest test-syntax-quoted-vector-static-initializer
   (let [class-reader (-> syntax-quote/syntax-quoted-vector class .getName clojure.asm.ClassReader.)
         fields (atom [])
+        seen-invoke-dynamic (volatile! false)
         visitor (proxy [clojure.asm.ClassVisitor] [clojure.asm.Opcodes/ASM4 nil]
                   (visitField [access name descriptor signature value]
                     (swap! fields conj name)
-                    nil))]
+                    nil)
+                  (visitMethod [access name descriptor signature exceptions]
+                    (when (= name "invokeStatic")
+                      (proxy [clojure.asm.MethodVisitor] [clojure.asm.Opcodes/ASM4]
+                        (visitInvokeDynamicInsn [name bsm bsmargs]
+                          (vreset! seen-invoke-dynamic true)
+                          nil)))))]
     (.accept class-reader visitor 0)
     ;; if a var was not directly linkable, a statically initialized field would be added to the function
-    (is (empty? @fields))))
+    (is (empty? @fields))
+    ;; all method calls are static
+    (is (false? @seen-invoke-dynamic))))

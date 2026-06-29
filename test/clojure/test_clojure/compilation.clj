@@ -457,8 +457,10 @@
 (deftest test-syntax-quoted-vector-static-initializer
   (let [class-reader (-> syntax-quote/syntax-quoted-vector class .getName clojure.asm.ClassReader.)
         fields (atom [])
-        method-opcode-mapping {clojure.asm.Opcodes/INVOKESTATIC :INVOKESTATIC
-                               clojure.asm.Opcodes/INVOKEDYNAMIC :INVOKEDYNAMIC}
+        method-opcode-mapping {clojure.asm.Opcodes/INVOKEVIRTUAL :INVOKEVIRTUAL
+                               clojure.asm.Opcodes/INVOKEDYNAMIC :INVOKEDYNAMIC
+                               clojure.asm.Opcodes/INVOKESTATIC :INVOKESTATIC
+                               clojure.asm.Opcodes/INVOKEINTERFACE :INVOKEINTERFACE}
         method-opcodes (atom #{})
         visitor (proxy [clojure.asm.ClassVisitor] [clojure.asm.Opcodes/ASM4 nil]
                   (visitField [access name descriptor signature value]

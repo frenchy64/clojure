@@ -1,0 +1,54 @@
+From b34f34ee4fdeea46ea3a8724ed8164d28e446346 Mon Sep 17 00:00:00 2001
+From: Ambrose Bonnaire-Sergeant <ambrose@ambrosebs.com>
+Date: Sun, 28 Jun 2026 14:45:12 -0700
+Subject: [PATCH] CLJ-2962: enable direct linking for syntax-quoted vectors
+
+---
+ src/jvm/clojure/lang/LispReader.java | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/src/jvm/clojure/lang/LispReader.java b/src/jvm/clojure/lang/LispReader.java
+index 8d7079cf..6b7d4318 100644
+--- a/src/jvm/clojure/lang/LispReader.java
++++ b/src/jvm/clojure/lang/LispReader.java
+@@ -46,17 +46,17 @@ static final Symbol THE_VAR = Symbol.intern("var");
+ static Symbol UNQUOTE = Symbol.intern("clojure.core", "unquote");
+ static Symbol UNQUOTE_SPLICING = Symbol.intern("clojure.core", "unquote-splicing");
+ static Symbol CONCAT = Symbol.intern("clojure.core", "concat");
+ static Symbol SEQ = Symbol.intern("clojure.core", "seq");
+ static Symbol LIST = Symbol.intern("clojure.core", "list");
+ static Symbol APPLY = Symbol.intern("clojure.core", "apply");
+ static Symbol HASHMAP = Symbol.intern("clojure.core", "hash-map");
+ static Symbol HASHSET = Symbol.intern("clojure.core", "hash-set");
+-static Symbol VECTOR = Symbol.intern("clojure.core", "vector");
++static Symbol VEC = Symbol.intern("clojure.core", "vec");
+ static Symbol WITH_META = Symbol.intern("clojure.core", "with-meta");
+ static Symbol META = Symbol.intern("clojure.core", "meta");
+ static Symbol DEREF = Symbol.intern("clojure.core", "deref");
+ static Symbol READ_COND = Symbol.intern("clojure.core", "read-cond");
+ static Symbol READ_COND_SPLICING = Symbol.intern("clojure.core", "read-cond-splicing");
+ static Keyword UNKNOWN = Keyword.intern(null, "unknown");
+ //static Symbol DEREF_BANG = Symbol.intern("clojure.core", "deref!");
+ 
+@@ -1092,17 +1092,17 @@ public static class SyntaxQuoteReader extends AFn{
+ 				ret = form;
+ 			else if(form instanceof IPersistentMap)
+ 				{
+ 				IPersistentVector keyvals = flattenMap(form);
+ 				ret = RT.list(APPLY, HASHMAP, RT.list(SEQ, RT.cons(CONCAT, sqExpandList(keyvals.seq()))));
+ 				}
+ 			else if(form instanceof IPersistentVector)
+ 				{
+-				ret = RT.list(APPLY, VECTOR, RT.list(SEQ, RT.cons(CONCAT, sqExpandList(((IPersistentVector) form).seq()))));
++				ret = RT.list(VEC, RT.list(SEQ, RT.cons(CONCAT, sqExpandList(((IPersistentVector) form).seq()))));
+ 				}
+ 			else if(form instanceof IPersistentSet)
+ 				{
+ 				ret = RT.list(APPLY, HASHSET, RT.list(SEQ, RT.cons(CONCAT, sqExpandList(((IPersistentSet) form).seq()))));
+ 				}
+ 			else if(form instanceof ISeq || form instanceof IPersistentList)
+ 				{
+ 				ISeq seq = RT.seq(form);
+-- 
+2.54.0
+

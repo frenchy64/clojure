@@ -78,7 +78,6 @@ static final Symbol REIFY = Symbol.intern("reify*");
 static final Symbol LIST = Symbol.intern("clojure.core", "list");
 static final Symbol HASHMAP = Symbol.intern("clojure.core", "hash-map");
 static final Symbol VECTOR = Symbol.intern("clojure.core", "vector");
-static final Symbol IDENTITY = Symbol.intern("clojure.core", "identity");
 
 static final Symbol _AMP_ = Symbol.intern("&");
 static final Symbol ISEQ = Symbol.intern("clojure.lang.ISeq");
@@ -7627,7 +7626,7 @@ public static Object macroexpand1(Object x) {
 					Object target = RT.second(form);
 					if(HostExpr.maybeClass(target, false) != null)
 						{
-						target = ((IObj)RT.list(IDENTITY, target)).withMeta(RT.map(RT.TAG_KEY,CLASS));
+						target = ((IObj)RT.list(DO, target)).withMeta(RT.map(RT.TAG_KEY,CLASS));
 						}
 					return preserveTag(form, RT.listStar(DOT, target, meth, form.next().next()));
 					}

@@ -7616,6 +7616,7 @@ public static Object macroexpand1(Object x) {
 				Symbol sym = (Symbol) op;
 				String sname = sym.name;
 				//(.substring s 2 5) => (. s substring 2 5)
+				//also (.method ClassName ...) => (java.lang.Class/.method ClassName ...)
 				// ns == null ensures that Class/.instanceMethod isn't expanded to . form
 				if(sym.name.charAt(0) == '.' && sym.ns == null)
 					{
@@ -7624,7 +7625,6 @@ public static Object macroexpand1(Object x) {
 								"Malformed member expression, expecting (.member target ...)");
 					Symbol meth = Symbol.intern(sname.substring(1));
 					Object target = RT.second(form);
-					// translate (.instanceMethodOnClass Object ...) to (java.lang.Class/.instanceMethodOnClass Object ...)
 					if(HostExpr.maybeClass(target, false) != null)
 						{
 						Symbol qmeth = Symbol.intern("java.lang.Class", "."+meth.name);

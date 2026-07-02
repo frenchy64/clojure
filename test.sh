@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+set -e
+
 mvn clean
 mvn -Plocal -Dmaven.test.skip=true package
 mkdir -p classes

@@ -68,7 +68,7 @@ static final Symbol DEFTYPE = Symbol.intern("deftype*");
 static final Symbol CASE = Symbol.intern("case*");
 
 //static final Symbol THISFN = Symbol.intern("thisfn");
-static final Symbol CLASS = Symbol.intern("Class");
+//static final Symbol CLASS = Symbol.intern("Class");
 static final Symbol NEW = Symbol.intern("new");
 static final Symbol THIS = Symbol.intern("this");
 static final Symbol REIFY = Symbol.intern("reify*");
@@ -7624,9 +7624,11 @@ public static Object macroexpand1(Object x) {
 								"Malformed member expression, expecting (.member target ...)");
 					Symbol meth = Symbol.intern(sname.substring(1));
 					Object target = RT.second(form);
+					// translate (.instanceMethodOnClass Object ...) to (java.lang.Class/.instanceMethodOnClass Object ...)
 					if(HostExpr.maybeClass(target, false) != null)
 						{
-						target = ((IObj)RT.list(DO, target)).withMeta(RT.map(RT.TAG_KEY,CLASS));
+						Symbol qmeth = Symbol.intern("java.lang.Class", "."+meth.name);
+						return preserveTag(form, RT.listStar(qmeth, target, form.next().next()));
 						}
 					return preserveTag(form, RT.listStar(DOT, target, meth, form.next().next()));
 					}

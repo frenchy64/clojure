@@ -1,0 +1,36 @@
+Compiled from "NO_SOURCE_FILE"
+public final class user$c1 extends clojure.lang.AFunction {
+  public static final java.lang.Object const__1;
+
+  public static final java.lang.Object const__2;
+
+  public user$c1();
+    Code:
+       0: aload_0
+       1: invokespecial #9                  // Method clojure/lang/AFunction."<init>":()V
+       4: return
+
+  public static java.lang.Object invokeStatic();
+    Code:
+       0: getstatic     #15                 // Field const__1:Ljava/lang/Object;
+       3: invokestatic  #20                 // Method clojure/core$identity.invokeStatic:(Ljava/lang/Object;)Ljava/lang/Object;
+       6: checkcast     #22                 // class java/lang/Class
+       9: getstatic     #25                 // Field const__2:Ljava/lang/Object;
+      12: invokevirtual #28                 // Method java/lang/Class.cast:(Ljava/lang/Object;)Ljava/lang/Object;
+      15: areturn
+
+  public java.lang.Object invoke();
+    Code:
+       0: invokestatic  #31                 // Method invokeStatic:()Ljava/lang/Object;
+       3: areturn
+
+  public static {};
+    Code:
+       0: ldc           #34                 // String java.lang.Object
+       2: invokestatic  #40                 // Method clojure/lang/RT.classForName:(Ljava/lang/String;)Ljava/lang/Class;
+       5: putstatic     #15                 // Field const__1:Ljava/lang/Object;
+       8: lconst_1
+       9: invokestatic  #46                 // Method java/lang/Long.valueOf:(J)Ljava/lang/Long;
+      12: putstatic     #25                 // Field const__2:Ljava/lang/Object;
+      15: return
+}

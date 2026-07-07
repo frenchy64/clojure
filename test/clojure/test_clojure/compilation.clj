@@ -13,6 +13,7 @@
   (:import (clojure.lang Compiler Compiler$CompilerException))
   (:require [clojure.test.generative :refer (defspec)]
             [clojure.data.generators :as gen]
+            [clojure.test-clojure.compilation.syntax-quote :as syntax-quote]
             [clojure.test-clojure.compilation.line-number-examples :as line])
   (:use clojure.test
         [clojure.test-helper :only (should-not-reflect should-print-err-message)]))
@@ -451,3 +452,30 @@
       (meta ^:foo (reify clojure.lang.ILookup)) #{:foo}
       (meta (macroexpand-1 '(reify clojure.lang.ILookup))) #{:line :column}
       (meta (macroexpand-1 '^:foo (reify clojure.lang.ILookup))) #{:line :column :foo})))
+
+;; CLJ-2962: tests that a syntax quoted vector expands to directly-linkable code.
+(deftest test-syntax-quoted-vector-direct-linking
+  (if (not= "true" (System/getProperty "clojure.compiler.direct-linking"))
+    (println "Skipping test-syntax-quoted-vector-static-initializer, direct linking off")
+    (let [class-reader (-> syntax-quote/syntax-quoted-vector class .getName clojure.asm.ClassReader.)
+          fields (atom [])
+          method-opcode-mapping {clojure.asm.Opcodes/INVOKEVIRTUAL :INVOKEVIRTUAL
+                                 clojure.asm.Opcodes/INVOKEDYNAMIC :INVOKEDYNAMIC
+                                 clojure.asm.Opcodes/INVOKESTATIC :INVOKESTATIC
+                                 clojure.asm.Opcodes/INVOKEINTERFACE :INVOKEINTERFACE}
+          method-opcodes (atom #{})
+          visitor (proxy [clojure.asm.ClassVisitor] [clojure.asm.Opcodes/ASM4 nil]
+                    (visitField [access name descriptor signature value]
+                      (swap! fields conj name)
+                      nil)
+                    (visitMethod [access name descriptor signature exceptions]
+                      (when (= name "invokeStatic")
+                        (proxy [clojure.asm.MethodVisitor] [clojure.asm.Opcodes/ASM4]
+                          (visitMethodInsn [opcode owner name descriptor isInterface]
+                            (swap! method-opcodes conj (get method-opcode-mapping opcode opcode))
+                            nil)))))]
+      (.accept class-reader visitor 0)
+      ;; if a var was not directly linkable, a statically initialized field would be added to the function
+      (is (empty? @fields))
+      ;; all method calls are static
+      (is (= #{:INVOKESTATIC} @method-opcodes)))))

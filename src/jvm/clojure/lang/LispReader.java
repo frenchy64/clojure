@@ -51,7 +51,7 @@ static Symbol LIST = Symbol.intern("clojure.core", "list");
 static Symbol APPLY = Symbol.intern("clojure.core", "apply");
 static Symbol HASHMAP = Symbol.intern("clojure.core", "hash-map");
 static Symbol HASHSET = Symbol.intern("clojure.core", "hash-set");
-static Symbol VECTOR = Symbol.intern("clojure.core", "vector");
+static Symbol VEC = Symbol.intern("clojure.core", "vec");
 static Symbol WITH_META = Symbol.intern("clojure.core", "with-meta");
 static Symbol META = Symbol.intern("clojure.core", "meta");
 static Symbol DEREF = Symbol.intern("clojure.core", "deref");
@@ -1097,7 +1097,7 @@ public static class SyntaxQuoteReader extends AFn{
 				}
 			else if(form instanceof IPersistentVector)
 				{
-				ret = RT.list(APPLY, VECTOR, RT.list(SEQ, RT.cons(CONCAT, sqExpandList(((IPersistentVector) form).seq()))));
+				ret = RT.list(VEC, RT.list(SEQ, RT.cons(CONCAT, sqExpandList(((IPersistentVector) form).seq()))));
 				}
 			else if(form instanceof IPersistentSet)
 				{

@@ -1,0 +1,25 @@
+import clojure.lang.RT;
+import clojure.lang.AFunction;
+
+// 
+// Decompiled by Procyon v0.6.0
+// 
+
+public final class user$c1 extends AFunction
+{
+    public static final Object const__0;
+    public static final Object const__1;
+    
+    public static Object invokeStatic() {
+        return ((Class)user$c1.const__0).cast(user$c1.const__1);
+    }
+    
+    public Object invoke() {
+        return invokeStatic();
+    }
+    
+    static {
+        const__0 = RT.classForName("java.lang.Object");
+        const__1 = 1L;
+    }
+}

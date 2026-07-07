@@ -68,7 +68,7 @@ static final Symbol DEFTYPE = Symbol.intern("deftype*");
 static final Symbol CASE = Symbol.intern("case*");
 
 //static final Symbol THISFN = Symbol.intern("thisfn");
-static final Symbol CLASS = Symbol.intern("Class");
+//static final Symbol CLASS = Symbol.intern("Class");
 static final Symbol NEW = Symbol.intern("new");
 static final Symbol THIS = Symbol.intern("this");
 static final Symbol REIFY = Symbol.intern("reify*");
@@ -78,7 +78,6 @@ static final Symbol REIFY = Symbol.intern("reify*");
 static final Symbol LIST = Symbol.intern("clojure.core", "list");
 static final Symbol HASHMAP = Symbol.intern("clojure.core", "hash-map");
 static final Symbol VECTOR = Symbol.intern("clojure.core", "vector");
-static final Symbol IDENTITY = Symbol.intern("clojure.core", "identity");
 
 static final Symbol _AMP_ = Symbol.intern("&");
 static final Symbol ISEQ = Symbol.intern("clojure.lang.ISeq");
@@ -7617,6 +7616,7 @@ public static Object macroexpand1(Object x) {
 				Symbol sym = (Symbol) op;
 				String sname = sym.name;
 				//(.substring s 2 5) => (. s substring 2 5)
+				//also (.method ClassName ...) => (java.lang.Class/.method ClassName ...)
 				// ns == null ensures that Class/.instanceMethod isn't expanded to . form
 				if(sym.name.charAt(0) == '.' && sym.ns == null)
 					{
@@ -7627,7 +7627,8 @@ public static Object macroexpand1(Object x) {
 					Object target = RT.second(form);
 					if(HostExpr.maybeClass(target, false) != null)
 						{
-						target = ((IObj)RT.list(IDENTITY, target)).withMeta(RT.map(RT.TAG_KEY,CLASS));
+						Symbol qmeth = Symbol.intern("java.lang.Class", "."+meth.name);
+						return preserveTag(form, RT.listStar(qmeth, target, form.next().next()));
 						}
 					return preserveTag(form, RT.listStar(DOT, target, meth, form.next().next()));
 					}

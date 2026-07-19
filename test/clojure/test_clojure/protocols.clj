@@ -316,6 +316,10 @@
 (defrecord RecordToTestB [b])
 (defrecord RecordToTestHugeFactories [a b c d e f g h i j k l m n o p q r s t u v w x y z])
 (defrecord RecordToTestDegenerateFactories [])
+(defrecord RecordToTestArglistsClash1 [m])
+(defrecord RecordToTestArglistsClash2 [m0])
+(defrecord RecordToTestArglistsClash3 [m m0 m1 m2 m3])
+(defrecord RecordToTestArglistsClash4 [m m0 m1 m2 m3 m5 m6])
 
 (deftest test-record-factory-fns
   (testing "if the definition of a defrecord generates the appropriate factory functions"
@@ -369,6 +373,43 @@
         ;; just test non-nil to avoid overspecifiying what's in the docstring
         (is (false? (-> ->RecordToTestFactories var meta :doc nil?)))
         (is (false? (->  map->RecordToTestFactories var meta :doc nil?))))
+      (testing "that map factory functions have custom :arglists which is referenced by :doc"
+        ;; example tests
+        (testing "with non-clashing argument name"
+          (is (= {:arglists '([{:keys [a] :as m}])
+                  :doc "Factory function for class clojure.test_clojure.protocols.RecordToTestA, taking a map m of keywords to field values."}
+                 (-> #'map->RecordToTestA meta (select-keys [:doc :arglists])))))
+        (testing "with clashing argument name"
+          (is (= {:arglists '([{:keys [m] :as m0}])
+                  :doc "Factory function for class clojure.test_clojure.protocols.RecordToTestArglistsClash1, taking a map m0 of keywords to field values."}
+                 (-> #'map->RecordToTestArglistsClash1 meta (select-keys [:doc :arglists])))))
+        ;; deduplicated tests
+        (let [ctor->expected-arglists {`map->RecordToTestDegenerateFactories '([m])
+                                       `map->RecordToTestA '([{:keys [a] :as m}])
+                                       `map->RecordToTestB '([{:keys [b] :as m}])
+                                       `map->RecordToTestArglistsClash1 '([{:keys [m] :as m0}])
+                                       `map->RecordToTestArglistsClash2 '([{:keys [m0] :as m}]) 
+                                       `map->RecordToTestArglistsClash3 '([{:keys [m m0 m1 m2 m3] :as m4}]) 
+                                       `map->RecordToTestArglistsClash4 '([{:keys [m m0 m1 m2 m3 m5 m6] :as m4}]) 
+                                       `map->RecordToTestFactories '([{:keys [a b c] :as m}]) 
+                                       `map->RecordToTestHugeFactories '([{:keys [a b c d e f g h i j k l m n o p q r s t u v w x y z] :as m0}])}
+              gen-expected-meta (fn [map-ctor-qsym arglists]
+                                  {:pre [(qualified-symbol? map-ctor-qsym)
+                                         (sequential? arglists)]}
+                                  (let [map-ctor-arg-name (ffirst arglists)
+                                        map-ctor-arg-name (if (symbol? map-ctor-arg-name)
+                                                            map-ctor-arg-name
+                                                            (:as map-ctor-arg-name))
+                                        classname (symbol (str (munge (namespace map-ctor-qsym)) "."
+                                                               (-> map-ctor-qsym name (subs (count "map->")))))]
+                                    (assert (simple-symbol? map-ctor-arg-name))
+                                    {:doc (format "Factory function for class %s, taking a map %s of keywords to field values."
+                                                  classname map-ctor-arg-name)
+                                     :arglists arglists}))]
+          (doseq [[vsym expected-arglists] ctor->expected-arglists
+                  :let [expected-meta (gen-expected-meta vsym expected-arglists)]]
+            (testing (str vsym " has expected :arglists with corresponding :doc")
+              (is (= expected-meta (-> vsym resolve meta (select-keys [:doc :arglists]))))))))
       (testing "that a literal record equals one by the positional factory fn"
         (is (= #clojure.test_clojure.protocols.RecordToTestFactories{:a 1 :b 2 :c 3} (->RecordToTestFactories 1 2 3)))
         (is (= #clojure.test_clojure.protocols.RecordToTestFactories{:a 1 :b nil :c nil} (->RecordToTestFactories 1 nil nil)))

@@ -573,7 +573,7 @@ public Object invoke(Object arg1, Object arg2, Object arg3, Object arg4, Object 
                                Util.ret1(arg18,arg18=null),
                                Util.ret1(arg19,arg19=null),
                                Util.ret1(arg20,arg20=null),
-                               args);
+                               (Object[])Util.ret1(args, args=null));
 }
 
     public IPersistentMap getMethodTable() {

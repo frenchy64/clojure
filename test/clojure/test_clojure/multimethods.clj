@@ -269,3 +269,12 @@
     (is (fn? (get-method simple3 :b)))
     (is (= :b ((get-method simple3 :b) 1)))
     (is (nil? (get-method simple3 :c)))))
+
+(defmulti multi-30-args (constantly :default))
+(defmethod multi-30-args :default [& args]
+  (assert (= args (range 30)) (vec args))
+  [:ok args])
+
+;; exercise 21+ arg multimethod invocation (which was slightly optimized for CLJ-2729)
+(deftest multi-30-args-test
+  (is (= [:ok (range 30)] (apply multi-30-args (range 30)))))

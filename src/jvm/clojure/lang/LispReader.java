@@ -46,11 +46,13 @@ static final Symbol THE_VAR = Symbol.intern("var");
 static Symbol UNQUOTE = Symbol.intern("clojure.core", "unquote");
 static Symbol UNQUOTE_SPLICING = Symbol.intern("clojure.core", "unquote-splicing");
 static Symbol CONCAT = Symbol.intern("clojure.core", "concat");
-static Symbol SEQ = Symbol.intern("clojure.core", "seq");
+//static Symbol SEQ = Symbol.intern("clojure.core", "seq");
 static Symbol LIST = Symbol.intern("clojure.core", "list");
+static Symbol LIST_STAR = Symbol.intern("clojure.core", "list*");
 static Symbol APPLY = Symbol.intern("clojure.core", "apply");
 static Symbol HASHMAP = Symbol.intern("clojure.core", "hash-map");
 static Symbol HASHSET = Symbol.intern("clojure.core", "hash-set");
+static Symbol VEC = Symbol.intern("clojure.core", "vec");
 static Symbol VECTOR = Symbol.intern("clojure.core", "vector");
 static Symbol WITH_META = Symbol.intern("clojure.core", "with-meta");
 static Symbol META = Symbol.intern("clojure.core", "meta");
@@ -1093,23 +1095,100 @@ public static class SyntaxQuoteReader extends AFn{
 			else if(form instanceof IPersistentMap)
 				{
 				IPersistentVector keyvals = flattenMap(form);
-				ret = RT.list(APPLY, HASHMAP, RT.list(SEQ, RT.cons(CONCAT, sqExpandList(keyvals.seq()))));
+				ISeq seq = keyvals.seq();
+				// `{~@k ~@v} => (apply hash-map (concat k v))
+				if(hasSplice(seq))
+					ret = RT.list(APPLY, HASHMAP, RT.cons(CONCAT, sqExpandList(seq)));
+				// `{} => {}
+				else if(seq == null)
+					ret = PersistentArrayMap.EMPTY;
+				// `{k v} => {`k `v}
+				else if(seq.count() == 2)
+					ret = PersistentArrayMap.createAsIfByAssoc(RT.toArray(sqExpandFlat(seq)));
+				// `{k v ...} => (hash-map k v ...)
+				//TODO if keys are all constants we can expand to {k v ...}, see `map constant keys` test
+				else
+					ret = RT.cons(HASHMAP, sqExpandFlat(seq));
 				}
 			else if(form instanceof IPersistentVector)
 				{
-				ret = RT.list(APPLY, VECTOR, RT.list(SEQ, RT.cons(CONCAT, sqExpandList(((IPersistentVector) form).seq()))));
+				ISeq seq = ((IPersistentVector) form).seq();
+				if(hasSplice(seq))
+					// `[~@v] => (vec v)
+					if(seq.count() == 1)
+						ret = RT.cons(VEC, sqExpandList(seq));
+					// `[a b ~@c] => (apply vector a b c)
+					else if(hasOnlyTrailingSplice(seq))
+						ret = RT.cons(APPLY, RT.cons(VECTOR, sqExpandFlat(seq)));
+					// `[~@a b ~@c] => (vec (concat a [b] c))
+					// idea: (-> (vec a) (conj b) (into c))
+					else
+						ret = RT.list(VEC, RT.cons(CONCAT, sqExpandList(seq)));
+				else
+					{
+					ISeq flat = sqExpandFlat(seq);
+					// `[] => []
+					if(seq == null)
+						ret = PersistentVector.EMPTY;
+					// `[:a 1 'b] => '[:a 1 b]
+					else if(isAllQuoteLiftable(flat))
+						ret = RT.list(QUOTE, LazilyPersistentVector.create(sqLiftQuoted(flat)));
+					// `[a ~b c] => [`a b `c]
+					else
+						ret = LazilyPersistentVector.create(flat);
+					}
 				}
 			else if(form instanceof IPersistentSet)
 				{
-				ret = RT.list(APPLY, HASHSET, RT.list(SEQ, RT.cons(CONCAT, sqExpandList(((IPersistentSet) form).seq()))));
+				ISeq seq = ((IPersistentSet) form).seq();
+				// `#{~@a b ~@c} => (apply hash-set (concat a [b] c))
+				// optimization ideas:
+				// - use (clojure.core/set ..) instead of (apply hash-set ..)
+				// - use (-> (set a) (conj b) (into c))
+				// - remove redundant (concat a) => a
+				// - if has just trailing splice, use fixed args of hash-set
+				//   - `#{~@a ~b c} => (apply hash-set b `c a)
+				if(hasSplice(seq))
+					ret = RT.list(APPLY, HASHSET, RT.cons(CONCAT, sqExpandList(seq)));
+				// `#{} => #{}
+				else if(seq == null)
+					ret = PersistentHashSet.EMPTY;
+				// `#{a ~b c} => (hash-set `a b `c)
+				// TODO if distinct, compile to set literal: `#{a ~b c} => '#{a b c}
+				else
+					ret = RT.cons(HASHSET, sqExpandFlat(seq));
 				}
 			else if(form instanceof ISeq || form instanceof IPersistentList)
 				{
 				ISeq seq = RT.seq(form);
+				// `() => ()
 				if(seq == null)
-					ret = RT.cons(LIST,null);
+					ret = PersistentList.EMPTY;
+				else if(hasSplice(seq))
+					{
+					// `(~a b ~@c) => (list* a `b c)
+					if(hasOnlyTrailingSplice(seq))
+						ret = RT.cons(LIST_STAR, sqExpandFlat(seq));
+					// `(~@a b ~@c) => (list* (concat a [`b] c))
+					// using list* instead of seq here to handle (~@a ~@b) when a=() b=().
+					// since (seq (concat () ())) => nil.
+					//TODO use list* leading args until first splice.
+					// e.g., `(deftype* ~1 ~2 ~3 ~4 :implements ~5 ~@v1 ~@v2)
+					//       => (list* `deftype* 1 2 3 4 `:implements 5 (concat v1 v2))
+					// see "list* leading args" test
+					else
+						ret = RT.list(LIST_STAR, RT.cons(CONCAT, sqExpandList(seq)));
+					}
 				else
-					ret = RT.list(SEQ, RT.cons(CONCAT, sqExpandList(seq)));
+					{
+					ISeq flat = sqExpandFlat(seq);
+					// `(:a 1 'b) => '(:a 1 b)
+					if(isAllQuoteLiftable(flat))
+						ret = RT.list(QUOTE, sqLiftQuoted(flat));
+					// `(a ~b c) => (list `a b `c)
+					else
+						ret = RT.cons(LIST, flat);
+					}
 				}
 			else
 				throw new UnsupportedOperationException("Unknown Collection type");
@@ -1117,7 +1196,9 @@ public static class SyntaxQuoteReader extends AFn{
 		else if(form instanceof Keyword
 		        || form instanceof Number
 		        || form instanceof Character
-		        || form instanceof String)
+		        || form instanceof String
+		        // `nil => nil, before (quote nil)
+		        || form == null)
 			ret = form;
 		else
 			ret = RT.list(Compiler.QUOTE, form);
@@ -1132,17 +1213,168 @@ public static class SyntaxQuoteReader extends AFn{
 		return ret;
 	}
 
+	// returns true iff only the final seq elem is ~@.
+	// throws if seq has no splices.
+	private static boolean hasOnlyTrailingSplice(ISeq seq) {
+		for(; seq != null; seq = seq.next())
+			{
+			if(isUnquoteSplicing(seq.first()))
+				return seq.next() == null;
+			}
+		throw Util.runtimeException("expected splice");
+	}
+
+	// returns true if form is or can be converted to a constant.
+	private static boolean isQuoteLiftable(Object form) {
+		if(form instanceof Keyword
+				|| form instanceof Number
+				|| form instanceof Character
+				|| form instanceof String
+				|| form == null)
+			return true;
+		else if(form instanceof IPersistentVector)
+			{
+			// [:a 1 'b] => true (transform to (quote [:a 1 b]))
+			// [a b c]   => false
+			return isAllQuoteLiftable(RT.seq(form));
+			}
+		else if(form instanceof ISeq || form instanceof IPersistentList)
+			{
+			ISeq seq = RT.seq(form);
+			// () => true (already constant)
+			if(seq == null)
+				return true;
+			// (quote X) => true (already constant)
+			else if(seq.count() == 2 && Util.equals(RT.first(form),QUOTE))
+				return true;
+			// (+ 1 2) => false
+			else
+				return false;
+			}
+		else
+			return false;
+	}
+
+	// transform form as if it was already (syntax) quoted.
+	//TODO maps
+	private static Object liftQuoted(Object form) {
+		if(form instanceof Keyword
+		    || form instanceof Number
+		    || form instanceof Character
+		    || form instanceof String
+		    || form == null
+		    || form instanceof IPersistentVector)
+		  return form;
+		else if(form instanceof ISeq || form instanceof IPersistentList)
+		  {
+		  ISeq seq = RT.seq(form);
+		  if(seq == null)
+		    return form;
+		  else if(seq.count() == 2 && Util.equals(RT.first(form),QUOTE))
+		    return RT.second(seq);
+		  else
+		    throw Util.runtimeException("cannot lift "+form);
+		  }
+		else
+		  throw Util.runtimeException("cannot lift"+form);
+	}
+
+	// returns true iff all seq elems can be converted to constants
+	private static boolean isAllQuoteLiftable(ISeq seq) {
+		for(; seq != null; seq = seq.next())
+			{
+			if(!isQuoteLiftable(seq.first()))
+				return false;
+			}
+		return true;
+	}
+
+	// returns true iff seq contains ~@
+	private static boolean hasSplice(ISeq seq) {
+		for(; seq != null; seq = seq.next())
+			{
+			if(isUnquoteSplicing(seq.first()))
+				return true;
+			}
+		return false;
+	}
+
+	// transform each element of seq as if seq was already (syntax) quoted.
+	// ~ and ~@ not allowed.
+	// e.g., sqLiftQuoted(('a 1 :b)) => (a 1 :b)
+	private static ISeq sqLiftQuoted(ISeq seq) {
+		PersistentVector ret = PersistentVector.EMPTY;
+		for(; seq != null; seq = seq.next())
+			{
+			Object item = seq.first();
+			if(isUnquote(item) || isUnquoteSplicing(item))
+				throw Util.runtimeException("cannot lift unquoted");
+			else
+				ret = ret.cons(liftQuoted(item));
+			}
+		return ret.seq();
+	}
+
+	// treat ~@ as if it was ~. assumes caller has analyzed ~@ positions beforehand.
+	// useful for generating list* calls if you know only the last elem is ~@.
+	private static ISeq sqExpandFlat(ISeq seq) {
+		PersistentVector ret = PersistentVector.EMPTY;
+		for(; seq != null; seq = seq.next())
+			{
+			Object item = seq.first();
+			if(isUnquote(item) || isUnquoteSplicing(item))
+				// add splice as collection so it can be passed to list*
+				ret = ret.cons(RT.second(item));
+			else
+				ret = ret.cons(syntaxQuote(item));
+			}
+		return ret.seq();
+	}
+
+	// transform each element of seq as if seq was already (syntax) quoted.
+	// ~ and ~@ allowed.
+	// sqExpandList((~@a b ~@c ~d)) => (a `[b] c [d])
 	private static ISeq sqExpandList(ISeq seq) {
 		PersistentVector ret = PersistentVector.EMPTY;
 		for(; seq != null; seq = seq.next())
 			{
 			Object item = seq.first();
-			if(isUnquote(item))
-				ret = ret.cons(RT.list(LIST, RT.second(item)));
-			else if(isUnquoteSplicing(item))
+			if(isUnquoteSplicing(item))
+				{
 				ret = ret.cons(RT.second(item));
+				}
 			else
-				ret = ret.cons(RT.list(LIST, syntaxQuote(item)));
+				{
+				//group contiguous values between unquote-splices
+				// [1 2 ~@a 3 4] => [[1 2] a [3 4]]
+				// TODO if all quoted, lift to group level
+				IPersistentVector group = PersistentVector.EMPTY;
+				while(true)
+					{
+					if(isUnquote(item))
+						group = group.cons(RT.second(item));
+					else
+						group = group.cons(syntaxQuote(item));
+					seq = seq.next();
+					if(seq != null)
+						{
+						item = seq.first();
+						if(isUnquoteSplicing(item))
+							{
+							ret = ret.cons(group);
+							ret = ret.cons(RT.second(item));
+							break;
+							}
+						}
+					else
+						{
+						ret = ret.cons(group);
+						break;
+						}
+					}
+				}
+			if(seq == null)
+				break;
 			}
 		return ret.seq();
 	}

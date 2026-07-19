@@ -31,10 +31,75 @@
 (def ^:dynamic *test-value* 1)
 
 (deftest future-fn-properly-retains-conveyed-bindings
-  (let [a (atom [])]
-    (binding [*test-value* 2]
+  (let [sentinel (Object.)
+        a (atom [])]
+    (binding [*test-value* sentinel]
       @(future (dotimes [_ 3]
                  ;; we need some binding to trigger binding pop
                  (binding [*print-dup* false]
-                   (swap! a conj *test-value*))))
-      (is (= [2 2 2] @a)))))
+                   (swap! a conj *test-value*)))
+               (swap! a conj
+                      *test-value*
+                      @(future *test-value*)
+                      @(future @(future *test-value*))))
+      (is (= (repeat 6 sentinel) @a)))))
+
+;; improve likelihood of catching a Thread holding onto its thread bindings
+;; before it's cleared by another job. note this only expands the pool for futures
+;; and send-off, not send-via.
+(let [pool-size 500
+      d (delay (let [p (promise)]
+                 (mapv deref (mapv #(future (if (= (dec pool-size) %) (deliver p true) @p)) (range pool-size)))))]
+  (defn expand-thread-pool! [] @d nil))
+
+(deftest future-cleans-up-binding-conveyance
+  (expand-thread-pool!)
+  (let [strong-ref (volatile! (Object.))
+        weak-ref (java.lang.ref.WeakReference. @strong-ref)]
+    (binding [*test-value* @strong-ref]
+      @(future
+         (or (identical? @strong-ref *test-value*)
+             (throw (Exception.)))))
+    (vreset! strong-ref nil)
+    (System/gc)
+    (doseq [i (range 10)
+            :while (some? (.get weak-ref))]
+      (Thread/sleep 1000)
+      (System/gc))
+    (is (nil? (.get weak-ref)))))
+
+(deftest sent-agent-does-not-leak-memory
+  (expand-thread-pool!)
+  (let [strong-ref (volatile! (agent nil))
+        weak-ref (java.lang.ref.WeakReference. @strong-ref)]
+    (send-off @strong-ref vector)
+    (doseq [i (range 10)
+            :while (not (vector? @@strong-ref))]
+      (Thread/sleep 1000))
+    (vreset! strong-ref nil)
+    (System/gc)
+    (doseq [i (range 10)
+            :while (some? (.get weak-ref))]
+      (Thread/sleep 1000)
+      (System/gc))
+    (is (nil? (.get weak-ref)))))
+
+(deftest seque-does-not-leak-memory
+  (expand-thread-pool!)
+  (let [ready (promise)
+        strong-ref (volatile! (Object.))
+        weak-ref (java.lang.ref.WeakReference. @strong-ref)
+        the-seque (volatile! (seque 1 (cons nil
+                                            (lazy-seq
+                                              (let [s (repeat @strong-ref)]
+                                                (deliver ready true)
+                                                s)))))]
+    @ready
+    (vreset! strong-ref nil)
+    (vreset! the-seque nil)
+    (System/gc)
+    (doseq [i (range 10)
+            :while (some? (.get weak-ref))]
+      (Thread/sleep 1000)
+      (System/gc))
+    (is (nil? (.get weak-ref)))))

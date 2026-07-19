@@ -111,6 +111,7 @@ static class Action implements Runnable{
 			try
 				{
 				Object oldval = action.agent.state;
+				// conveys bindings via Var.resetThreadBindingFrame, which propagate to watches and error handlers
 				Object newval =  action.fn.applyTo(RT.cons(action.agent.state, action.args));
 				action.agent.setState(newval);
                 action.agent.notifyWatches(oldval,newval);
@@ -160,7 +161,16 @@ static class Action implements Runnable{
 	}
 
 	public void run(){
-		doRun(this);
+		Object frame = Var.getThreadBindingFrame();
+		try
+			{
+			doRun(this);
+			}
+		finally
+			{
+			// ensure thread bindings conveyed by fn are not held by this Thread
+			Var.resetThreadBindingFrame(frame);
+			}
 	}
 }
 

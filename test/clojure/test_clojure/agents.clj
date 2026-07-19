@@ -148,7 +148,7 @@
     (doto (Thread.
            (fn []
              (binding [*bind-me* :thread-binding]
-               (send a (constantly *bind-me*)))
+               (send a (fn [& _] *bind-me*)))
              (await a)))
       (.start)
       (.join))

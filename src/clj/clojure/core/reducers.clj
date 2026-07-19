@@ -109,6 +109,15 @@
   [name doc meta args & body]
   (do-curried name doc meta args body))
 
+(defn- easy-diff-vec-fn []
+  `[])
+
+(defmacro easy-diff-vec-macro []
+  (easy-diff-vec-fn))
+
+(defn- easy-diff-vec-usage []
+  (easy-diff-vec-macro))
+
 (defn- do-rfn [f1 k fkv]
   `(fn
      ([] (~f1))

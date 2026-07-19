@@ -5,7 +5,7 @@
   <artifactId>clojure</artifactId>
   <name>clojure</name>
   <packaging>jar</packaging>
-  <version>1.13.0-master-SNAPSHOT</version>
+  <version>1.13.0-syntaxquotedvec</version>
 
   <url>http://clojure.org/</url>
   <description>Clojure core environment and runtime library.</description>
@@ -35,6 +35,9 @@
 
   <properties>
     <directlinking>true</directlinking>
+    <optimizeSyntaxQuote>false</optimizeSyntaxQuote>
+    <!-- just for reproducibility, not part of syntax-quote optimization -->
+    <project.build.outputTimestamp>2026-01-01T00:00:00Z</project.build.outputTimestamp>
   </properties>
 
   <dependencies>
@@ -272,6 +275,13 @@
       <id>test-no-direct</id>
       <properties>
         <directlinking>false</directlinking>
+      </properties>
+    </profile>
+    <!-- Use "mvn -PoptimizeSyntaxQuote" to enable syntax quote optimization -->
+    <profile>
+      <id>optimizeSyntaxQuote</id>
+      <properties>
+        <optimizeSyntaxQuote>true</optimizeSyntaxQuote>
       </properties>
     </profile>
     <profile>

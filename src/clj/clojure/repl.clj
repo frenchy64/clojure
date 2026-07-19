@@ -270,8 +270,10 @@ str-or-pattern."
 ;; ----------------------------------------------------------------------
 ;; Handle Ctrl-C keystrokes
 
-(defn thread-stopper
-  "Returns a function that takes one arg and uses that as an exception message
+(defn ^{:deprecated "1.12"} thread-stopper
+  "Deprecated --- relies on removed java.lang.Thread/stop method.
+  
+  Returns a function that takes one arg and uses that as an exception message
   to stop the given thread.  Defaults to the current thread"
   ([] (thread-stopper (Thread/currentThread)))
   ([thread] (fn [msg] (.stop thread (Error. msg)))))
@@ -279,8 +281,13 @@ str-or-pattern."
 (defn set-break-handler!
   "Register INT signal handler.  After calling this, Ctrl-C will cause
   the given function f to be called with a single argument, the signal.
-  Uses thread-stopper if no function given."
-  ([] (set-break-handler! (thread-stopper)))
+
+  Uses thread-stopper if no function given. However, this behavior
+  is deprecated due to the removal of java.lang.Thread/stop."
+  ^{:deprecated "1.12"}
+  ([] 
+   (println "WARNING:" `set-break-handler! "with zero-arguments is deprecated.")
+   (set-break-handler! (thread-stopper)))
   ([f]
    (sun.misc.Signal/handle
      (sun.misc.Signal. "INT")
